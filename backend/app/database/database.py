@@ -1,16 +1,12 @@
-import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from app.config.config import settings
 from app.database.models.models import Base
-
-PATH = "app/database/settings.json"
-with open(PATH, "r", encoding="utf-8") as f:
-    config = json.load(f)
 
 DATABASE_URL = (
     f"postgresql+psycopg://"
-    f"{config['PG_USER']}:{config['PG_PASSWORD']}"
-    f"@{config['PG_HOST']}:{config['PG_PORT']}/{config['PG_DBNAME']}"
+    f"{settings.db.PG_USER}:{settings.db.PG_PASSWORD}"
+    f"@{settings.db.PG_HOST}:{settings.db.PG_PORT}/{settings.db.PG_DBNAME}"
 )
 
 engine = create_engine(
@@ -28,5 +24,10 @@ Session = sessionmaker(
 def init_db():
     Base.metadata.create_all(bind=engine)
 
-def get_session():
-    return Session()
+
+def get_db():
+    db = Session()
+    try:
+        yield db
+    finally:
+        db.close()
