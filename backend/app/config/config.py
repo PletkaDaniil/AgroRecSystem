@@ -1,6 +1,6 @@
 from pathlib import Path
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 # определяем корневую папку
@@ -37,12 +37,27 @@ class CORSSettings(BaseSettings):
     allow_headers: list[str] = ["*"]
 
 
+class DatabaseSettings(BaseSettings):
+    """
+        Настраиваем параметры подключения к БД
+    """
+    PG_USER: str
+    PG_PASSWORD: str
+    PG_HOST: str
+    PG_PORT: int
+    PG_DBNAME: str
+
+    # загружаем настройки из файла .env
+    model_config = SettingsConfigDict(env_file=".env")
+
+
 class Settings(BaseSettings):
     """
         Общие настройки приложения
     """
     auth: AuthJWTSettings = AuthJWTSettings()
     cors: CORSSettings = CORSSettings()
+    db = DatabaseSettings()
 
 
 settings = Settings()
