@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     """
     auth: AuthJWTSettings = AuthJWTSettings()
     cors: CORSSettings = CORSSettings()
-    db = DatabaseSettings()
+    db: DatabaseSettings = DatabaseSettings()
 
 
 settings = Settings()
