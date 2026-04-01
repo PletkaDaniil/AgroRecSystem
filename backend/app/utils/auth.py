@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import Response, HTTPException, status
+from fastapi import Response, HTTPException, status, Cookie, Depends
 from sqlalchemy.orm import Session
+
 from app.database.crud import (
     create_refresh_token as db_create_refresh_token,
+    get_user_by_id,
 )
+from app.database.database import get_db
 from app.utils.jwt import create_access_token, create_refresh_token, decode_jwt
 from app.config.config import settings
 
@@ -73,3 +76,50 @@ def issue_tokens(db: Session, user_id: int) -> tuple[str, str]:
     )
 
     return access_token, refresh_token
+
+
+def get_current_user(
+    access_token: str | None = Cookie(
+        default=None,
+        alias=settings.auth.access_cookie_name
+    ),
+    db: Session = Depends(get_db)
+):
+    """
+        Получаем текущего пользователя из access-token в cookie
+    """
+
+    # проверяем наличие access токена
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No access token in cookies",
+        )
+
+    try:
+        # декодируем JWT и извлекаем id пользователя
+        payload = decode_jwt(access_token)
+        user_id = payload.get("sub")
+
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid token payload",
+            )
+
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid access token",
+        )
+
+    # получаем пользователя из БД
+    user = get_user_by_id(db, int(user_id))
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User not found",
+        )
+
+    return user
