@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.database.crud import (
     get_user_by_id,
-    get_refresh_token,
+    get_refresh_token_by_token,
     get_user_by_name,
     get_user_by_email,
     create_user
@@ -13,6 +13,7 @@ from app.utils.auth import set_cookies, decode_refresh, issue_tokens
 from app.utils.schemas.user import RegistrationRequest, LoginRequest
 from app.config.config import settings
 from app.utils.jwt import decode_jwt
+from datetime import datetime, timezone
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -84,13 +85,13 @@ def refresh_tokens(
 
     #получаем jti и инфу о токене из БД
     jti = decode_refresh(refresh_token)
-    token_obj = get_refresh_token(db, token=jti)
+    token_obj = get_refresh_token_by_token(db, token=jti)
 
     if not token_obj:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token not found")
 
     # проверяем истечение срока действия
-    if token_obj.expires_at < token_obj.created_at:
+    if token_obj.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token expired")
 
     # + новая пара токенов
