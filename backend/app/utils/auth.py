@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from app.database.crud import (
     create_refresh_token as db_create_refresh_token,
     get_user_by_id,
+    get_refresh_token_by_user,
+    update_refresh_token
 )
 from app.database.database import get_db
 from app.utils.jwt import create_access_token, create_refresh_token, decode_jwt
@@ -60,6 +62,7 @@ def decode_refresh(token: str) -> str:
 def issue_tokens(db: Session, user_id: int) -> tuple[str, str]:
     """
         Создаем новую пару токенов access + refresh
+        Если refresh уже существует — обновляем его
     """
     access_token = create_access_token(user_id)
     refresh_token, jti = create_refresh_token()
@@ -68,12 +71,25 @@ def issue_tokens(db: Session, user_id: int) -> tuple[str, str]:
         seconds=settings.auth.refresh_token_expire_seconds
     )
 
-    db_create_refresh_token(
-        db,
-        token=jti,
-        user_id=user_id,
-        expires_at=expires_at,
-    )
+    # ищем refresh токен пользователя
+    existing_token = get_refresh_token_by_user(db, user_id)
+
+    if existing_token:
+        # обновляем существующий токен
+        update_refresh_token(
+            db,
+            refresh_token=existing_token,
+            token=jti,
+            expires_at=expires_at,
+        )
+    else:
+        # создаем новый токен после регистрации
+        db_create_refresh_token(
+            db,
+            token=jti,
+            user_id=user_id,
+            expires_at=expires_at,
+        )
 
     return access_token, refresh_token
 
