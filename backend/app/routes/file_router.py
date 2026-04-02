@@ -5,6 +5,7 @@ from app.services.chunk_upload_service import UploadService
 from app.services.tiff_processing_service import ProcessingService
 from app.utils.chunk_merge import merge_chunks
 from app.utils.schemas.uploadRequest import CreateUploadRequest
+from app.utils.schemas.processRequest import ProcessRequest
 from app.utils.auth import get_current_user
 
 
@@ -42,7 +43,6 @@ def create_upload(
     }
 
 
-
 @file_router.post("/upload-chunk")
 async def upload_chunk(
     upload_id: str,
@@ -65,7 +65,6 @@ async def upload_chunk(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to save chunk: {str(e)}",
         )
-
 
 
 @file_router.get("/upload-status/{upload_id}")
@@ -125,14 +124,13 @@ def complete_upload(
 
 @file_router.post("/process")
 def process_file(
-    upload_id: str,
-    algorithm: str,
+    body: ProcessRequest,
 ):
     """
         Запускаем обработку TIFF файла
     """
-    upload_dir = TMP_DIR / upload_id
-    tif_path = upload_dir / f"{upload_id}.tif"
+    upload_dir = TMP_DIR / body.upload_id
+    tif_path = upload_dir / f"{body.upload_id}.tif"
 
     if not tif_path.exists():
         raise HTTPException(
@@ -142,9 +140,11 @@ def process_file(
     try:
         processing_service.process_tiff(
             tif_path=tif_path,
-            algorithm=algorithm,
+            algorithm=body.algorithm,
+            growth_stage=body.growth_stage,
+            segmentation_level=body.segmentation_level,
+            bands=body.bands,
         )
-
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -158,8 +158,8 @@ def process_file(
         )
 
     return {
-        "image_url": f"/file/image/{upload_id}/{algorithm}",
-        "tif_url": f"/file/tif/{upload_id}/{algorithm}",
+        "image_url": f"/file/image/{body.upload_id}/{body.algorithm}",
+        "tif_url": f"/file/tif/{body.upload_id}/{body.algorithm}",
     }
 
 
