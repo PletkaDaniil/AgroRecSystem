@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.database.models.models import User, RefreshToken
 from app.database.models.roles import UserRole
@@ -120,7 +120,7 @@ def create_refresh_token(
     return refresh_token
 
 
-def get_refresh_token(
+def get_refresh_token_by_token(
     db: Session,
     token: str,
 ) -> RefreshToken | None:
@@ -132,6 +132,40 @@ def get_refresh_token(
         .filter(RefreshToken.token == token)
         .first()
     )
+
+
+def get_refresh_token_by_user(
+    db: Session,
+    user_id: int
+) -> RefreshToken | None:
+    """
+        Получаем refresh-токен по id пользователя
+    """
+    return (
+        db.query(RefreshToken)
+        .filter(RefreshToken.user_id == user_id)
+        .first()
+    )
+
+
+def update_refresh_token(
+    db: Session,
+    *,
+    refresh_token: RefreshToken,
+    token: str,
+    expires_at: datetime,
+) -> RefreshToken:
+    """
+        Обновляем refresh токен пользователя
+    """
+    refresh_token.token = token
+    refresh_token.expires_at = expires_at
+    refresh_token.created_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(refresh_token)
+
+    return refresh_token
 
 
 def delete_refresh_token(
