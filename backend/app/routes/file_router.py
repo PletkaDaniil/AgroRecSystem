@@ -23,23 +23,13 @@ def create_upload(
     body: CreateUploadRequest,
     current_user=Depends(get_current_user),
 ):
-    """
-        Создаем новую загрузку файла
-    """
-
-    upload_id = f"{current_user.id}_{body.file_hash}_{body.algorithm}"
+    upload_id  = f"{current_user.id}_{body.file_hash}"
     upload_dir = TMP_DIR / upload_id
-
-    # проверяем был ли файл уже обработан
-    already_processed = (
-        any(upload_dir.glob("*_result.tif"))
-        if upload_dir.exists()
-        else False
-    )
+    tif_path   = upload_dir / f"{upload_id}.tif"
 
     return {
-        "upload_id": upload_id,
-        "already_processed": already_processed,
+        "upload_id":  upload_id,
+        "file_ready": tif_path.exists(),
     }
 
 
@@ -143,6 +133,7 @@ def process_file(
             algorithm=body.algorithm,
             growth_stage=body.growth_stage,
             segmentation_level=body.segmentation_level,
+            resolution=body.resolution,
             bands=body.bands,
         )
     except ValueError as e:
