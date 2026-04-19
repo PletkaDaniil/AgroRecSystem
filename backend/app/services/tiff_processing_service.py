@@ -1,16 +1,13 @@
 from pathlib import Path
-from app.core.geo_index import (
-    IndexProcessor,
-    IndexVisualizer,
-    ChlRI,
-    NDVI,
-    RPImod,
-)
+from app.core.geo_index import IndexProcessor, NDVI, ChlRI, RPImod
+from app.core.spatial_resampler import resample_to_resolution
+from app.core.segmentation import segment_tiff
+from app.utils.schemas.processRequest import Bands
 
 
 class ProcessingService:
     """
-        Сервис обработки 300-канальных TIFF изображений
+        Сервис обработки гиперспектральных TIFF изображений
     """
 
     def __init__(self):
@@ -25,6 +22,10 @@ class ProcessingService:
         self,
         tif_path: Path,
         algorithm: str,
+        growth_stage: str,
+        segmentation_level: int,
+        resolution: float,
+        bands: Bands,
     ) -> tuple[Path, Path]:
         """
             Обрабатываем TIFF и возвращаем пути к результатам
@@ -32,26 +33,35 @@ class ProcessingService:
 
         if algorithm not in self.algorithms:
             raise ValueError(f"Unknown algorithm: {algorithm}")
-
+ 
+        band_map: dict[str, int] = bands.model_dump()
         index_class = self.algorithms[algorithm]
 
         # задаем для RPImod параметр c1 (нам нужен именно 0.5)
-        index = index_class() if algorithm != "RPImod" else index_class(c1=0.5)
-
-        processor = IndexProcessor()
-
-        # формируем пути для результатов
-        result_tif = tif_path.with_name(f"{tif_path.stem}_result.tif")
-        result_png = tif_path.with_name(f"{tif_path.stem}_result.png")
-
-        # вычисляем индекс
-        processor.process(
-            src_path=tif_path,
-            index=index,
-            dst_path=result_tif,
+        index = (
+            index_class(band_map=band_map, c1=0.5)
+            if algorithm == "RPImod"
+            else index_class(band_map=band_map)
         )
 
-        # и сохраняем визуализацию
-        IndexVisualizer().save(result_tif, result_png)
+        processor = IndexProcessor()
+        result_tif = processor.process(
+            src_path=tif_path,
+            index=index,
+        )
+ 
+        # ресемплинг
+        resampled_tif = resample_to_resolution(
+            src_path=result_tif,
+            src_resolution_m=resolution,
+        )
+
+        # сегментация
+        result_tif, result_png = segment_tiff(
+            src_path=resampled_tif,
+            algorithm=algorithm,
+            growth_stage=growth_stage,
+            segmentation_level=segmentation_level,
+        )
 
         return result_tif, result_png
