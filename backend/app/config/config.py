@@ -16,9 +16,9 @@ class AuthJWTSettings(BaseSettings):
     algorithm: str = "RS256"
 
     # время жизни access-токена (в секундах)
-    access_token_expire_seconds: int = 10
+    access_token_expire_seconds: int = 60 * 3
     # время жизни refresh-токена (в секундах)
-    refresh_token_expire_seconds: int = 30
+    refresh_token_expire_seconds: int = 60 * 60 * 24 * 7
 
     access_cookie_name: str = "access_token"
     refresh_cookie_name: str = "refresh_token"
