@@ -159,7 +159,7 @@ def get_image(upload_id: str):
     """
         Получаем PNG изображение результата
     """
-    path = TMP_DIR / upload_id / f"{upload_id}_result.png"
+    path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.png"
 
     if not path.exists():
         raise HTTPException(
@@ -178,7 +178,7 @@ def get_tif(upload_id: str):
     """
         Получаем TIFF файл результата
     """
-    path = TMP_DIR / upload_id / f"{upload_id}_result.tif"
+    path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.tif"
 
     if not path.exists():
         raise HTTPException(
@@ -189,5 +189,5 @@ def get_tif(upload_id: str):
     return FileResponse(
         path,
         media_type="image/tiff",
-        filename=f"{upload_id}_result.tif",
+        filename=f"{upload_id}_result_1m_seg.tif",
     )
