@@ -3,7 +3,7 @@ from typing import Union
 import shutil
 import numpy as np
 import rasterio
-from scipy.ndimage import gaussian_filter
+from rasterio.enums import Resampling
 
 
 # целевое пространственное разрешение -> 1 метр на пиксель
@@ -32,9 +32,9 @@ def resample_to_resolution(
     dst_path.parent.mkdir(parents=True, exist_ok=True)
 
     # считаем коэффициент изменения разрешения
-    block = target_resolution_m // (src_resolution_m / 100.0)
+    block = target_resolution_m / (src_resolution_m / 100.0)
 
-    # если исходное разрешение уже больше метра
+    # если исходное разрешение уже больше целевого
     if block <= 1.0:
         shutil.copy2(src_path, dst_path)
         return dst_path
@@ -42,52 +42,35 @@ def resample_to_resolution(
     block_int = int(round(block))
 
     with rasterio.open(src_path) as src:
-        # читаем данные индекса
-        data = src.read().astype(np.float32)   # shape: (bands, H, W)
+        H, W = src.height, src.width
+
+        # вычисляем размеры результирующего растра
+        new_H = (H + block_int - 1) // block_int
+        new_W = (W + block_int - 1) // block_int
 
         profile = src.profile.copy()
-        transform = src.transform
+        profile.update(
+            height=new_H,
+            width=new_W,
+            transform=src.transform * src.transform.scale(block_int, block_int),
+            dtype="float32",
+            nodata=np.nan,
+            tiled=True,
+            blockxsize=256,
+            blockysize=256,
+            compress="lzw",
+        )
 
-    bands, H, W = data.shape
+        # усредняем блоки
+        with rasterio.open(dst_path, "w", **profile) as dst:
+            for band_idx in range(1, src.count + 1):
+                data = src.read(
+                    band_idx,
+                    out_shape=(new_H, new_W),
+                    resampling=Resampling.average,
+                ).astype(np.float32)
 
-    # сглаживаем изображение перед даунсемплингом
-    sigma = block / 3.0
-    smoothed = gaussian_filter(data, sigma=(0, sigma, sigma))
-
-    # даунсемплируем изображение, усредняя значения внутри блоков размером block x block
-    new_H = (H + block_int - 1) // block_int
-    new_W = (W + block_int - 1) // block_int
-
-    result = np.full((bands, new_H, new_W), np.nan, dtype=np.float32)
-
-    # усредняем значения внутри каждого блока
-    for i in range(new_H):
-        for j in range(new_W):
-
-            y0, y1 = i * block_int, min((i + 1) * block_int, H)
-            x0, x1 = j * block_int, min((j + 1) * block_int, W)
-
-            tile = smoothed[:, y0:y1, x0:x1]
-
-            # среднее значение индекса внутри блока
-            result[:, i, j] = np.nanmean(tile, axis=(1, 2))
-
-    # сохраняем результат в новый TIFF файл
-    new_transform = transform * transform.scale(block_int, block_int)
-    profile.update(
-        height=new_H,
-        width=new_W,
-        transform=new_transform,
-        dtype="float32",
-        nodata=np.nan,
-        tiled=True,
-        blockxsize=256,
-        blockysize=256,
-        compress="lzw",
-    )
-
-    # записываем новый TIFF
-    with rasterio.open(dst_path, "w", **profile) as dst:
-        dst.write(result)
+                # записываем новый TIFF
+                dst.write(data, band_idx)
 
     return dst_path
