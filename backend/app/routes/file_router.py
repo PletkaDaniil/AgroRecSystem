@@ -151,6 +151,7 @@ def process_file(
     return {
         "image_url": f"/file/image/{body.upload_id}/{body.algorithm}",
         "tif_url": f"/file/tif/{body.upload_id}/{body.algorithm}",
+        "fert_url": f"/file/fertilization/{body.upload_id}/{body.algorithm}"
     }
 
 
@@ -190,4 +191,21 @@ def get_tif(upload_id: str):
         path,
         media_type="image/tiff",
         filename=f"{upload_id}_result_1m_seg.tif",
+    )
+
+
+@file_router.get("/fertilization/{upload_id}/{algorithm}")
+def get_fertilization(upload_id: str):
+    """
+        Получаем JSON файл результата количества вносимых удобрений
+    """
+    path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.json"
+
+    if not path.exists():
+        raise HTTPException(404, "Fertilization JSON not found")
+
+    return FileResponse(
+        path,
+        media_type="application/json",
+        filename=f"{upload_id}.json",
     )
