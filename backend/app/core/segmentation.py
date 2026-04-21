@@ -1,15 +1,10 @@
 from pathlib import Path
 from typing import Union
-
 import numpy as np
 import rasterio
 from rasterio.windows import Window
-
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-
 from scipy.ndimage import median_filter, binary_opening, binary_closing
-
 from app.config.zones_config import get_zones
 
 
@@ -24,12 +19,12 @@ def segment_tile(tile: np.ndarray, zones) -> np.ndarray:
     """
         Преобразовываем значение индекса в классы зон
 
-        Каждый пиксель получает: номер зоны (0..N)
+        Каждый пиксель получает: номер зоны (class_id)
     """
 
     out = np.full(tile.shape, -1, dtype=np.int8)
 
-    for i, z in enumerate(zones):
+    for z in zones:
 
         # проверяем попадание в диапазон зоны
         lo = tile >= z.vmin if np.isfinite(z.vmin) else np.ones_like(tile, bool)
@@ -37,13 +32,13 @@ def segment_tile(tile: np.ndarray, zones) -> np.ndarray:
 
         mask = lo & hi & ~np.isnan(tile)
 
-        # присваиваем класс зоны
-        out[mask] = i
+        # присваиваем класс зоны (явный class_id)
+        out[mask] = z.class_id
 
     return out
 
 
-def smooth(zone_map: np.ndarray, n_zones: int) -> np.ndarray:
+def smooth(zone_map: np.ndarray, zones) -> np.ndarray:
     """
         Убираем шум в сегментации через медианный фильтр + морфологию
     """
@@ -58,15 +53,17 @@ def smooth(zone_map: np.ndarray, n_zones: int) -> np.ndarray:
     canvas = sm.copy()
 
     # морфологическая очистка по каждому классу
-    for z in range(n_zones):
+    class_ids = [z.class_id for z in zones]
 
-        mask = sm == z
+    for cid in class_ids:
+
+        mask = sm == cid
 
         if mask.any():
             opened = binary_opening(mask, iterations=1)
             closed = binary_closing(opened, iterations=1)
 
-            canvas[closed] = z
+            canvas[closed] = cid
 
     return canvas
 
@@ -137,7 +134,7 @@ def segment_tiff(
                     seg = segment_tile(tile, zones)
 
                     # сглаживание
-                    seg = smooth(seg, len(zones))
+                    seg = smooth(seg, zones)
 
                     # запись результата
                     dst.write(seg, 1, window=win)
@@ -145,10 +142,23 @@ def segment_tiff(
     with rasterio.open(dst_tif) as src:
         preview = src.read(1)
 
-    cmap = ListedColormap([z.color for z in zones])
+    # cтроим корректное RGB-изображение, опираясь на class_id
+    class_to_rgb = {}
+    for z in zones:
+        r = int(z.color[1:3], 16)
+        g = int(z.color[3:5], 16)
+        b = int(z.color[5:7], 16)
+        class_to_rgb[z.class_id] = (r, g, b)
+
+    H, W = preview.shape
+    rgb = np.zeros((H, W, 3), dtype=np.uint8)
+
+    for class_id, (r, g, b) in class_to_rgb.items():
+        mask = preview == class_id
+        rgb[mask] = (r, g, b)
 
     plt.figure(figsize=(10, 10))
-    plt.imshow(preview, cmap=cmap)
+    plt.imshow(rgb)
     plt.axis("off")
 
     dst_png.parent.mkdir(parents=True, exist_ok=True)
