@@ -3,6 +3,7 @@ from app.core.geo_index import IndexProcessor, NDVI, ChlRI, RPImod
 from app.core.spatial_resampler import resample_to_resolution
 from app.core.segmentation import segment_tiff
 from app.utils.schemas.processRequest import Bands
+from app.services.fertilization_service import generate_fertilization_json
 
 
 class ProcessingService:
@@ -64,4 +65,10 @@ class ProcessingService:
             segmentation_level=segmentation_level,
         )
 
+        generate_fertilization_json(
+            result_tif_path=result_tif,
+            algorithm=algorithm,
+            growth_stage=growth_stage,
+            segmentation_level=segmentation_level,
+        )
         return result_tif, result_png
