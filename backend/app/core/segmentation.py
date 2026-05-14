@@ -3,6 +3,9 @@ from typing import Union
 import numpy as np
 import rasterio
 from rasterio.windows import Window
+import matplotlib
+matplotlib.use("Agg")  # отключаем GUI backend
+
 import matplotlib.pyplot as plt
 from scipy.ndimage import median_filter, binary_opening, binary_closing
 from app.config.zones_config import get_zones
@@ -157,13 +160,13 @@ def segment_tiff(
         mask = preview == class_id
         rgb[mask] = (r, g, b)
 
-    plt.figure(figsize=(10, 10))
-    plt.imshow(rgb)
-    plt.axis("off")
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.imshow(rgb)
+    ax.axis("off")
 
     dst_png.parent.mkdir(parents=True, exist_ok=True)
 
-    plt.savefig(dst_png, bbox_inches="tight", pad_inches=0)
-    plt.close()
+    fig.savefig(dst_png, bbox_inches="tight", pad_inches=0)
+    plt.close(fig)
 
     return dst_tif, dst_png
