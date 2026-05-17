@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives import serialization
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-KEYS_DIR = BASE_DIR / "keys"
+KEYS_DIR = BASE_DIR / "app" /"keys"
 
 KEYS_DIR.mkdir(exist_ok=True)
 
