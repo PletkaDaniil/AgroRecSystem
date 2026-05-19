@@ -1,38 +1,59 @@
-# frontend
+# Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+Клиентская часть проекта реализована на Vue 3 и отвечает за пользовательский интерфейс системы: загрузку снимков, настройку параметров обработки, отправку запросов на backend и отображение результатов сегментации полей.
 
-## Recommended IDE Setup
+---
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Запуск frontend части проекта
 
-## Recommended Browser Setup
+### 1. Установка зависимостей
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd) 
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+Переходим в директорию frontend-проекта:
 
-## Customize configuration
+```
+cd frontend
+```
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+Устанавливаем все необходимые зависимости:
 
-## Project Setup
-
-```sh
+```
 npm install
 ```
 
-### Compile and Hot-Reload for Development
+---
 
-```sh
+### 2. Настройка переменных окружения
+
+Перед запуском необходимо создать файл `.env` в корне frontend.
+
+За основу используется файл `.env.example`.
+
+Внутри необходимо указать адрес backend API:
+
+```
+VITE_API_URL=http://localhost:8000/api
+```
+
+По умолчанию backend запускается на порту `8000`. Если сервер запускается на другом порту, значение необходимо изменить вручную.
+
+---
+
+### 3. Запуск frontend сервера
+
+Запуск проекта в режиме разработки:
+
+```
 npm run dev
 ```
 
-### Compile and Minify for Production
+После запуска адрес приложения будет отображен в терминале.
 
-```sh
-npm run build
-```
+---
+
+## Структура frontend проекта
+
+- `src/views` — основные страницы приложения
+- `src/components` — Vue-компоненты интерфейса
+- `src/api` — работа с API backend части
+- `src/utils` — вспомогательные функции
+- `src/router` — маршрутизация страниц
