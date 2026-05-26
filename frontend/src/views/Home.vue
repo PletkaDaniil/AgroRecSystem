@@ -13,7 +13,7 @@
             <em>угодий</em>
           </h1>
           <p class="hero-desc">
-            Мы разрабатываем инструменты спектральной сегментации для мониторинга состояния посевов, выявления стресс-зон и оценки вегетативного индекса по мультиспектральным снимкам.
+            Мы разрабатываем систему анализа состояния посевов пшеницы на основе мультиспектральных и гиперспектральных снимков. Решение позволяет оценивать состояние растений по вегетационным индексам, выявлять стресс-зоны и формировать рекомендации по дифференцированному внесению азотных удобрений.
           </p>
           <p class="hero-desc">
             Наши алгоритмы работают с данными спутников и БПЛА, позволяя агрономам и аналитикам принимать решения на основе актуальных данных о состоянии полей.
@@ -25,12 +25,12 @@
             </div>
             <div class="stat-div"></div>
             <div class="stat">
-              <span class="stat-num">мм</span>
+              <span class="stat-num">High</span>
               <span class="stat-label">Точность</span>
             </div>
             <div class="stat-div"></div>
             <div class="stat">
-              <span class="stat-num">RT</span>
+              <span class="stat-num">Real-Time</span>
               <span class="stat-label">Обработка</span>
             </div>
           </div>
@@ -476,9 +476,10 @@ import api from '@/api/http'
 import { uploadFile } from '@/utils/uploadFile'
 
 const galleryCards = [
-  { title: 'Пшеничное поле, июль', method: 'NDVI' },
-  { title: 'Кукурузный массив',    method: 'ChlRI' },
-  { title: 'Смешанные культуры',   method: 'NDVI' },
+  { title: '', method: '' },
+  { title: '',    method: '' },
+  { title: '',   method: '' },
+  { title: '',   method: '' }
 ]
 const cardStyles = reactive(galleryCards.map(() => ({
   transform: 'perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)',
@@ -544,12 +545,42 @@ const growthStages = [
 const bands = reactive({ nir: null, red: null, red_edge: null, blue: null, b1: null, b2: null })
 
 const bandFields = [
-  { key: 'nir',      label: 'NIR',      placeholder: '175', hint: 'Ближний инфракрасный канал (Near-Infrared). Отражает состояние биомассы и хлорофилла. Используется в NDVI и ChlRI.' },
-  { key: 'red_edge', label: 'Red Edge', placeholder: '152', hint: 'Красный край (Red Edge, ~700–730 нм). Чувствителен к содержанию хлорофилла. Используется в NDVI.' },
-  { key: 'red',      label: 'Red',      placeholder: '140', hint: 'Красный канал (Red, ~620–700 нм). Поглощается хлорофиллом. Используется в ChlRI.' },
-  { key: 'blue',     label: 'Blue',     placeholder: '29',  hint: 'Синий канал (Blue, ~450–500 нм). Используется в формуле ChlRI как базовый уровень отражения.' },
-  { key: 'b1',       label: 'B1',       placeholder: '88',  hint: 'Первый коротковолновый инфракрасный канал. Используется в RPImod.' },
-  { key: 'b2',       label: 'B2',       placeholder: '70',  hint: 'Второй ближний инфракрасный канал. Используется совместно с B1 в RPImod.' },
+  {
+    key: 'nir',
+    label: 'NIR',
+    placeholder: '175',
+    hint: 'Ближний инфракрасный диапазон (NIR, ~740–1300 нм).'
+  },
+  {
+    key: 'red_edge',
+    label: 'Red Edge',
+    placeholder: '152',
+    hint: 'Диапазон красного края (Red Edge, ~700–740 нм).'
+  },
+  {
+    key: 'red',
+    label: 'Red',
+    placeholder: '140',
+    hint: 'Красный диапазон (Red, ~600–700 нм).'
+  },
+  {
+    key: 'blue',
+    label: 'Blue',
+    placeholder: '29',
+    hint: 'Синий диапазон (Blue, ~380–450 нм).'
+  },
+  {
+    key: 'b1',
+    label: 'B1',
+    placeholder: '88',
+    hint: 'Дополнительный спектральный канал, используемый при расчете PRI_mod (~570 нм).'
+  },
+  {
+    key: 'b2',
+    label: 'B2',
+    placeholder: '70',
+    hint: 'Дополнительный спектральный канал, применяемый совместно с B1 для анализа состояния растительности (~531 нм).'
+  },
 ]
 
 const algorithmBands = { ChlRI: ['nir', 'red_edge', 'blue'], NDVI: ['nir', 'red'], RPImod: ['b1', 'b2'] }
@@ -586,7 +617,7 @@ const formulas = [
   {
     id: 'RPImod',
     name: 'RPImod',
-    description: 'Modified Red-edge Position Index: c1 − (B1 − B2) / (B1 + B2). Каналы: B1 (SWIR), B2 (NIR-2).',
+    description: 'Modified Red-edge Position Index: c1 − (B1 − B2) / (B1 + B2). Каналы: B1, B2, c1 = 0.5.',
     icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
   },
 ]
