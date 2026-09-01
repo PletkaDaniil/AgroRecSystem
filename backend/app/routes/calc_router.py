@@ -6,6 +6,7 @@ from app.services.tiff_processing_service import ProcessingService
 from app.services.sentinel_download_service import SentinelDownloadService
 from app.utils.schemas.calcRequest import CalculatorRequest
 from app.utils.schemas.processRequest import Bands
+from app.utils.archive import build_result_archive
 from app.utils.auth import get_current_user
 
 
@@ -79,7 +80,7 @@ def process_coords(
 
     return {
         "image_url": f"/calculator/image/{upload_id}/{body.algorithm}",
-        "tif_url": f"/calculator/tif/{upload_id}/{body.algorithm}",
+        "archive_url": f"/file/archive/{upload_id}/{body.algorithm}",
         "fert_url": f"/file/fertilization/{upload_id}/{body.algorithm}"
     }
 
@@ -137,4 +138,16 @@ def get_fertilization(upload_id: str):
         path,
         media_type="application/json",
         filename=f"{upload_id}.json",
+    )
+
+
+@calculator_router.get("/archive/{upload_id}/{algorithm}")
+def get_archive(upload_id: str):
+    upload_dir = TMP_DIR / upload_id
+    archive_path = build_result_archive(upload_dir, upload_id)
+
+    return FileResponse(
+        archive_path,
+        media_type="application/zip",
+        filename=f"{upload_id}_result.zip",
     )

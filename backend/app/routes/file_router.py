@@ -6,6 +6,7 @@ from app.services.tiff_processing_service import ProcessingService
 from app.utils.chunk_merge import merge_chunks
 from app.utils.schemas.uploadRequest import CreateUploadRequest
 from app.utils.schemas.processRequest import ProcessRequest
+from app.utils.archive import build_result_archive
 from app.utils.auth import get_current_user
 
 
@@ -150,7 +151,7 @@ def process_file(
 
     return {
         "image_url": f"/file/image/{body.upload_id}/{body.algorithm}",
-        "tif_url": f"/file/tif/{body.upload_id}/{body.algorithm}",
+        "archive_url": f"/file/archive/{body.upload_id}/{body.algorithm}",
         "fert_url": f"/file/fertilization/{body.upload_id}/{body.algorithm}"
     }
 
@@ -208,4 +209,15 @@ def get_fertilization(upload_id: str):
         path,
         media_type="application/json",
         filename=f"{upload_id}.json",
+    )
+
+@file_router.get("/archive/{upload_id}/{algorithm}")
+def get_archive(upload_id: str):
+    upload_dir = TMP_DIR / upload_id
+    archive_path = build_result_archive(upload_dir, upload_id)
+
+    return FileResponse(
+        archive_path,
+        media_type="application/zip",
+        filename=f"{upload_id}_result.zip",
     )
