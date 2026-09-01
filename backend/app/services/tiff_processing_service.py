@@ -4,6 +4,7 @@ from app.core.spatial_resampler import resample_to_resolution
 from app.core.segmentation import segment_tiff
 from app.utils.schemas.processRequest import Bands
 from app.services.fertilization_service import generate_fertilization_json
+from app.utils.shapefile import tif_to_shapefile
 
 
 class ProcessingService:
@@ -27,7 +28,7 @@ class ProcessingService:
         segmentation_level: int,
         resolution: float,
         bands: Bands,
-    ) -> tuple[Path, Path]:
+    ) -> tuple[Path, Path, Path]:
         """
             Обрабатываем TIFF и возвращаем пути к результатам
         """
@@ -71,4 +72,14 @@ class ProcessingService:
             growth_stage=growth_stage,
             segmentation_level=segmentation_level,
         )
-        return result_tif, result_png
+
+        base = str(result_tif).removesuffix(".tif")
+        shp_path = f"{base}.shp"
+
+        tif_to_shapefile(
+            tif_path=str(result_tif),
+            shp_path=shp_path,
+            nodata_class=None,
+        )
+
+        return result_tif, result_png, shp_path
