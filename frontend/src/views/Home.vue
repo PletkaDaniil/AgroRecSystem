@@ -359,9 +359,9 @@
         <div class="panel panel-right">
           <div class="panel-header">
             <span class="panel-label">РЕЗУЛЬТАТ СЕГМЕНТАЦИИ</span>
-            <button v-if="resultImage && resultTifUrl" class="export-btn export-btn--tif" @click="exportResult">
+            <button v-if="resultImage && resultArchiveUrl" class="export-btn export-btn--tif" @click="exportResult">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Скачать TIF
+              Скачать результат
             </button>
           </div>
 
@@ -643,7 +643,7 @@ const stageLabel = computed(() => ({
 }[uploadStage.value] ?? 'Обработка...'))
 
 const resultImage  = ref(null)
-const resultTifUrl = ref(null)
+const resultArchiveUrl = ref(null)
 
 const nitrogenZones = ref(null)
 const resultMeta = reactive({
@@ -779,7 +779,7 @@ const runAnalysis = async () => {
   uploadProgress.value = 0
   uploadStage.value    = ''
   resultImage.value    = null
-  resultTifUrl.value   = null
+  resultArchiveUrl.value   = null
   nitrogenZones.value  = null
 
   const processPayload = {
@@ -789,7 +789,7 @@ const runAnalysis = async () => {
   }
 
   try {
-    let imageUrl, tifUrl, fertUrl, uploadId
+    let imageUrl, archiveUrl, fertUrl, uploadId
 
     if (inputMode.value === 'file' && uploadedFile.value) {
       const filePayload = {
@@ -797,7 +797,7 @@ const runAnalysis = async () => {
         resolution: resolution.value,
         bands: { nir: bands.nir, red: bands.red, red_edge: bands.red_edge, blue: bands.blue, b1: bands.b1, b2: bands.b2 },
       }
-      ;({ imageUrl, tifUrl, fertUrl, uploadId } = await uploadFile(
+      ;({ imageUrl, archiveUrl, fertUrl, uploadId } = await uploadFile(
         uploadedFile.value,
         selectedFormula.value,
         filePayload,
@@ -818,14 +818,14 @@ const runAnalysis = async () => {
         ...processPayload,
       })
       imageUrl = data.image_url
-      tifUrl   = data.tif_url
+      archiveUrl = data.archive_url
       uploadId = data.upload_id
-      fertUrl  = data.fert_url
+      fertUrl = data.fert_url
     }
 
     const imageResp   = await api.get(imageUrl, { responseType: 'blob' })
     resultImage.value  = URL.createObjectURL(imageResp.data)
-    resultTifUrl.value = tifUrl
+    resultArchiveUrl.value = archiveUrl
 
     if (fertUrl || uploadId) {
       try {
@@ -864,10 +864,10 @@ const runAnalysis = async () => {
 }
 
 const exportResult = () => {
-  if (!resultTifUrl.value) return
+  if (!resultArchiveUrl.value) return
   const a = document.createElement('a')
-  a.href     = api.defaults.baseURL + resultTifUrl.value
-  a.download = `result_${selectedFormula.value}_${Date.now()}.tif`
+  a.href     = api.defaults.baseURL + resultArchiveUrl.value
+  a.download = `result_${selectedFormula.value}_${Date.now()}.zip`
   a.click()
 }
 </script>
