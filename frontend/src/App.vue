@@ -13,12 +13,15 @@
       <button class="primary-btn">Войти</button>
     </div>
   </div>
+  
+  <CookieConsent />
 </template>
 
 <script setup>
 import { ref, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import Notification from './components/Notification.vue'
+import CookieConsent from './components/CookieConsent.vue'
 
 const showLogin = ref(false)
 
