@@ -148,9 +148,9 @@ export async function uploadFile(
     notify('done')
 
     return {
-      imageUrl: data.image_url,
-      tifUrl:   data.tif_url,
-      fertUrl:  data.fert_url,
+      imageUrl:   data.image_url,
+      archiveUrl: data.archive_url,
+      fertUrl:    data.fert_url,
       uploadId,
     }
 
