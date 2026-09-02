@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <section class="hero">
-      <div class="hero-inner">
+      <div class="hero-inner hero-inner--wide">
         <div class="hero-text">
           <div class="hero-eyebrow">
             <span class="dot"></span>
@@ -13,10 +13,7 @@
             <em>угодий</em>
           </h1>
           <p class="hero-desc">
-            Мы разрабатываем систему анализа состояния посевов пшеницы на основе мультиспектральных и гиперспектральных снимков. Решение позволяет оценивать состояние растений по вегетационным индексам, выявлять стресс-зоны и формировать рекомендации по дифференцированному внесению азотных удобрений.
-          </p>
-          <p class="hero-desc">
-            Наши алгоритмы работают с данными спутников и БПЛА, позволяя агрономам и аналитикам принимать решения на основе актуальных данных о состоянии полей.
+            Анализируем посевы пшеницы по спутниковым и БПЛА-снимкам — оцениваем состояние растений, находим стресс-зоны и формируем карту дифференцированного внесения азотных удобрений.
           </p>
           <div class="hero-stats">
             <div class="stat">
@@ -37,26 +34,24 @@
         </div>
 
         <div class="hero-gallery">
-          <p class="gallery-label">Примеры сегментации полей</p>
-          <div class="gallery-grid">
+          <div
+            class="photo-stack"
+            @mouseenter="stackHover = true"
+            @mouseleave="stackHover = false"
+          >
             <div
               v-for="(card, i) in galleryCards"
               :key="i"
-              class="gallery-card"
+              class="stack-card"
+              :class="['stack-card--' + i, { 'stack-card--hovered': stackHover }]"
               @mousemove="onCardMove($event, i)"
               @mouseleave="onCardLeave(i)"
               :style="cardStyles[i]"
             >
-              <div class="gallery-card-img">
-                <div class="img-placeholder">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                  <span>Фото {{ i + 1 }}</span>
-                </div>
+              <div class="stack-card-img">
+                <img :src="card.img" :alt="card.method" class="stack-card-photo" />
               </div>
-              <div class="gallery-card-info">
-                <span class="gallery-card-title">{{ card.title }}</span>
-                <span class="gallery-card-badge">{{ card.method }}</span>
-              </div>
+              <span class="stack-card-badge" :class="'stack-card-badge--' + card.color">{{ card.method }}</span>
             </div>
           </div>
         </div>
@@ -468,38 +463,46 @@
       </div>
     </section>
   </div>
+
+  <SupportBanner />
 </template>
 
 <script setup>
+import ndviPhoto from '../components/images/main_photo_ndvi.png'
+import chlriPhoto from '../components/images/main_photo_chlri.png'
+import primodPhoto from '../components/images/main_photo_primod.png'
 import { ref, reactive, computed } from 'vue'
 import api from '@/api/http'
+import SupportBanner from '@/components/SupportBanner.vue'
 import { uploadFile } from '@/utils/uploadFile'
 
 const galleryCards = [
-  { title: '', method: '' },
-  { title: '',    method: '' },
-  { title: '',   method: '' },
-  { title: '',   method: '' }
+  { method: 'NDVI', color: 'green', img: ndviPhoto },
+  { method: 'ChlRI', color: 'blue', img: chlriPhoto },
+  { method: 'PRImod', color: 'amber', img: primodPhoto },
 ]
-const cardStyles = reactive(galleryCards.map(() => ({
-  transform: 'perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)',
-  transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1)',
-})))
+
+const stackHover = ref(false)
+const cardStyles = reactive(galleryCards.map(() => ({})))
+let hoveredIdx = ref(null)
+
 const onCardMove = (e, i) => {
+  hoveredIdx.value = i
   const el = e.currentTarget, rect = el.getBoundingClientRect()
   const dx = (e.clientX - rect.left - rect.width  / 2) / (rect.width  / 2)
   const dy = (e.clientY - rect.top  - rect.height / 2) / (rect.height / 2)
   cardStyles[i] = {
-    transform:  `perspective(700px) rotateX(${-dy * 8}deg) rotateY(${dx * 8}deg) scale(1.04)`,
-    transition: 'transform 0.08s ease',
-    boxShadow:  '0 16px 48px rgba(61,108,232,0.14)',
+    '--tilt-x': `${-dy * 6}deg`,
+    '--tilt-y': `${dx * 6}deg`,
+    transition: 'transform 0.08s ease, box-shadow 0.2s ease',
   }
 }
 const onCardLeave = (i) => {
+  hoveredIdx.value = null
   cardStyles[i] = {
-    transform:  'perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)',
-    transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)',
-    boxShadow:  '',
+    '--tilt-x': '0deg',
+    '--tilt-y': '0deg',
+    transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s ease',
   }
 }
 
@@ -885,10 +888,43 @@ const exportResult = () => {
 }
 
 .hero {
+  position: relative;
   padding: 72px 0 80px;
   border-bottom: 1px solid #e8eaee;
-  background: #fafbfc;
+  background:
+    radial-gradient(ellipse 500px 380px at 12% 20%,  rgba(107,181,106,0.22), transparent 60%),
+    radial-gradient(ellipse 420px 340px at 85% 15%,  rgba(139,195,74,0.18), transparent 55%),
+    radial-gradient(ellipse 460px 400px at 25% 85%,  rgba(76,138,74,0.16), transparent 58%),
+    radial-gradient(ellipse 380px 320px at 90% 80%,  rgba(107,181,106,0.14), transparent 55%),
+    radial-gradient(ellipse 600px 500px at 55% 45%,  rgba(163,201,116,0.12), transparent 65%),
+    linear-gradient(180deg, #f6f9f3 0%, #f2f7ee 100%);
+  overflow: hidden;
 }
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgba(76,138,74,0.05) 0px,
+    rgba(76,138,74,0.05) 2px,
+    transparent 2px,
+    transparent 26px
+  );
+  pointer-events: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: radial-gradient(rgba(76,138,74,0.06) 1px, transparent 1px);
+  background-size: 5px 5px;
+  pointer-events: none;
+}
+
 .hero-inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -897,6 +933,10 @@ const exportResult = () => {
   grid-template-columns: 1fr 1fr;
   gap: 80px;
   align-items: start;
+}
+.hero-inner--wide {
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 40px;
 }
 .hero-eyebrow {
   display: inline-flex;
@@ -969,43 +1009,114 @@ const exportResult = () => {
 }
 .stat-div { width: 1px; height: 32px; background: #e8eaee; }
 
-.hero-gallery { padding-top: 8px; }
-.gallery-label {
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 1.8px; text-transform: uppercase;
-  color: #c5c9d4; margin-bottom: 18px;
+.hero-gallery {
+  padding-top: 40px;
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+
+.photo-stack {
+  position: relative;
+  width: 680px;
+  height: 520px;
+}
+
+.stack-card {
+  position: absolute;
+  top: 0; left: 0;
+  width: 480px;
+  aspect-ratio: 16 / 10;
+  border: 1px solid #e8eaee;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+  will-change: transform;
+  transform:
+    translate(var(--base-x, 0px), var(--base-y, 0px))
+    rotate(var(--base-rot, 0deg))
+    scale(var(--base-scale, 1))
+    perspective(700px)
+    rotateX(var(--tilt-x, 0deg))
+    rotateY(var(--tilt-y, 0deg));
+  transition: transform 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s ease, filter 0.4s ease;
+}
+
+.stack-card--0 {
+  --base-x: 0px;    --base-y: 0px;    --base-rot: -4deg; --base-scale: 0.92;
+  z-index: 1;
+  box-shadow: 0 6px 20px rgba(13,15,20,0.10);
+  filter: brightness(0.88);
+}
+.stack-card--1 {
+  --base-x: 130px;  --base-y: 90px;   --base-rot: 1deg;  --base-scale: 0.96;
+  z-index: 2;
+  box-shadow: 0 10px 26px rgba(13,15,20,0.11);
+  filter: brightness(0.94);
+}
+.stack-card--2 {
+  --base-x: 240px;  --base-y: 168px;  --base-rot: 5deg;  --base-scale: 1;
+  z-index: 3;
+  box-shadow: 0 18px 44px rgba(13,15,20,0.16);
+  filter: brightness(1);
+}
+
+.stack-card--hovered.stack-card--0 { --base-x: -30px; --base-y: -14px; --base-rot: -9deg; }
+.stack-card--hovered.stack-card--1 { --base-x: 130px; --base-y: 80px;  --base-rot: 1deg; }
+.stack-card--hovered.stack-card--2 { --base-x: 250px; --base-y: 190px; --base-rot: 9deg; }
+
+.stack-card:hover {
+  z-index: 10 !important;
+  filter: brightness(1) !important;
+  box-shadow: 0 26px 60px rgba(61,108,232,0.22);
+}
+
+.stack-card-img {   width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block; }
+.stack-card-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.stack-card-badge {
+  position: absolute;
+  bottom: 12px; left: 12px;
+  font-size: 11px;
+  font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  z-index: 2;
 }
-.gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.gallery-card {
-  border: 1px solid #e8eaee; border-radius: 12px;
-  overflow: hidden; cursor: default;
-  will-change: transform; background: #fff;
-  transition: box-shadow 0.2s ease;
+.stack-card-badge--green {
+  color: #2f6b2f;
+  background: #dff2df;
+  border: 1px solid #8fc98d;
 }
-.gallery-card-img { aspect-ratio: 4/3; overflow: hidden; }
-.img-placeholder {
-  width: 100%; height: 100%;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 8px; color: #c5c9d4;
-  font-size: 11px; font-family: 'JetBrains Mono', monospace;
-  background:
-    repeating-linear-gradient(45deg, transparent 0px, transparent 12px, rgba(0,0,0,0.018) 12px, rgba(0,0,0,0.018) 24px),
-    #f6f7f9;
+
+.stack-card-badge--blue {
+  color: #2855c7;
+  background: #e1e9ff;
+  border: 1px solid #8da8ee;
 }
-.gallery-card-info {
-  display: flex; align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-top: 1px solid #f0f1f3;
+
+.stack-card-badge--amber {
+  color: #945914;
+  background: #fff0d9;
+  border: 1px solid #e5ad68;
 }
-.gallery-card-title { font-size: 12px; font-weight: 600; color: #374151; }
-.gallery-card-badge {
-  font-size: 10px; font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
-  color: #3d6ce8; background: rgba(61,108,232,0.08);
-  padding: 3px 8px; border-radius: 4px; letter-spacing: 0.3px;
+
+@media (max-width: 960px) {
+  .hero-inner--wide { grid-template-columns: 1fr; }
+  .hero-gallery      { justify-content: center; padding-right: 0; }
+  .photo-stack       { width: 420px; height: 340px; }
+  .stack-card        { width: 320px; }
 }
 
 .tool-section {
