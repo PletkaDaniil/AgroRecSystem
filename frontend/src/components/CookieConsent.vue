@@ -45,6 +45,7 @@ const accept = () => {
   background: white;
   padding: 20px 22px;
   border-radius: 16px;
+  border: 2px solid #e5e7eb;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: flex-start;
