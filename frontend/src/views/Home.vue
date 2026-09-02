@@ -795,10 +795,14 @@ const runAnalysis = async () => {
     let imageUrl, archiveUrl, fertUrl, uploadId
 
     if (inputMode.value === 'file' && uploadedFile.value) {
+      const requiredBands = algorithmBands[selectedFormula.value] ?? []
+
       const filePayload = {
         ...processPayload,
         resolution: resolution.value,
-        bands: { nir: bands.nir, red: bands.red, red_edge: bands.red_edge, blue: bands.blue, b1: bands.b1, b2: bands.b2 },
+        bands: Object.fromEntries(
+          requiredBands.map(key => [key, Number(bands[key])])
+        ),
       }
       ;({ imageUrl, archiveUrl, fertUrl, uploadId } = await uploadFile(
         uploadedFile.value,
