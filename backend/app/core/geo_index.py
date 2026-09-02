@@ -7,6 +7,9 @@ import rasterio
 from rasterio.windows import Window
 
 
+WINDOW_SIZE = 1024
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ЧТЕНИЕ GEOTIFF
 # ─────────────────────────────────────────────────────────────────────────────
@@ -61,10 +64,19 @@ class GeoTiffReader:
 
     def iter_windows(self) -> Generator[Window, None, None]:
         """
-            Итерация по тайлам GeoTIFF файла
+            Итерация по изображению окнами размера WINDOW_SIZE (сейчас 1024x1024)
         """
-        for _, window in self._ds.block_windows(1):
-            yield window
+        for row in range(0, self.height, WINDOW_SIZE):
+            for col in range(0, self.width, WINDOW_SIZE):
+
+                window = Window(
+                    col,
+                    row,
+                    min(WINDOW_SIZE, self.width - col),
+                    min(WINDOW_SIZE, self.height - row)
+                )
+
+                yield window
 
     def __enter__(self) -> "GeoTiffReader":
         return self
