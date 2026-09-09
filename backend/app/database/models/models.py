@@ -28,6 +28,11 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(
         SqlEnum(UserRole), default=UserRole.user, nullable=False
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
 
 
 class RefreshToken(Base):
@@ -54,3 +59,28 @@ class RefreshToken(Base):
     )
 
     user: Mapped["User"] = relationship(backref="refresh_tokens")
+
+
+class Analysis(Base):
+    """
+        Модель выполненного анализа (запуска обработки TIFF)
+    """
+    __tablename__ = "analyses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    upload_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    algorithm: Mapped[str] = mapped_column(String(50), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+    user: Mapped["User"] = relationship(backref="analyses")
