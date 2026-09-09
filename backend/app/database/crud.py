@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from app.database.models.models import User, RefreshToken
+from app.database.models.models import User, RefreshToken, Analysis
 from app.database.models.roles import UserRole
 
 
@@ -194,3 +194,62 @@ def delete_user_refresh_tokens(
         .delete(synchronize_session=False)
     )
     db.commit()
+
+
+# -----------------------------------------------
+# Блок функций для анализов: Analysis
+# -----------------------------------------------
+
+
+def create_analysis(
+    db: Session,
+    *,
+    user_id: int,
+    upload_id: str,
+    algorithm: str,
+) -> Analysis:
+    """
+        Создаем запись о выполненном анализе
+    """
+    analysis = Analysis(
+        user_id=user_id,
+        upload_id=upload_id,
+        algorithm=algorithm,
+    )
+    db.add(analysis)
+    db.commit()
+    db.refresh(analysis)
+    return analysis
+
+
+def get_latest_analyses_by_user(
+    db: Session,
+    *,
+    user_id: int,
+    limit: int = 5,
+) -> list[Analysis]:
+    """
+        Получаем последние 5 анализов пользователя, отсортированные по дате
+        Можно занить limit, если нужно будет получить больше или меньше анализов
+    """
+    return (
+        db.query(Analysis)
+        .filter(Analysis.user_id == user_id)
+        .order_by(Analysis.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def get_analysis_by_id(
+    db: Session,
+    analysis_id: int,
+) -> Analysis | None:
+    """
+        Получаем анализ по id
+    """
+    return (
+        db.query(Analysis)
+        .filter(Analysis.id == analysis_id)
+        .first()
+    )
