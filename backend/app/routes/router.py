@@ -127,3 +127,25 @@ def validate_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not found")
 
     return {"user_id": user.id, "role": user.role.value}
+
+@router.post("/logout")
+def logout(
+    response: Response,
+    refresh_token: str | None = Cookie(default=None, alias=settings.auth.refresh_cookie_name),
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+        При выходе из системы удаляем refresh токен из БД и очищаем куки
+    """
+    if refresh_token:
+        try:
+            jti = decode_refresh(refresh_token)
+            token_obj = get_refresh_token_by_token(db, token=jti)
+            if token_obj:
+                db.delete(token_obj)
+                db.commit()
+        except Exception:
+            pass
+    response.delete_cookie(settings.auth.access_cookie_name)
+    response.delete_cookie(settings.auth.refresh_cookie_name)
+    return {"message": "Logged out successfully"}
