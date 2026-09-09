@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routes.router import router
+from app.routes.users_router import users_router
 from app.routes.file_router import file_router
 from app.routes.calc_router import calculator_router
 from app.database.database import init_db
@@ -26,4 +27,7 @@ app.include_router(
 )
 app.include_router(
     router=calculator_router, prefix='/api'
+)
+app.include_router(
+    router=users_router, prefix='/api'
 )
