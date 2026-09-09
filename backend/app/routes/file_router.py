@@ -1,6 +1,9 @@
 from fastapi import APIRouter, UploadFile, HTTPException, Depends, status
 from fastapi.responses import FileResponse
 from pathlib import Path
+from sqlalchemy.orm import Session
+from app.database.crud import create_analysis
+from app.database.database import get_db
 from app.services.chunk_upload_service import UploadService
 from app.services.tiff_processing_service import ProcessingService
 from app.utils.chunk_merge import merge_chunks
@@ -8,6 +11,7 @@ from app.utils.schemas.uploadRequest import CreateUploadRequest
 from app.utils.schemas.processRequest import ProcessRequest
 from app.utils.archive import build_result_archive
 from app.utils.auth import get_current_user
+from app.utils.verify import verify_ownership
 
 
 file_router = APIRouter(
@@ -39,10 +43,12 @@ async def upload_chunk(
     upload_id: str,
     chunk_index: int,
     file: UploadFile,
+    current_user=Depends(get_current_user),
 ):
     """
         Загружаем chunk файла
     """
+    verify_ownership(upload_id, current_user)
     try:
         await upload_service.save_chunk(
             upload_id,
@@ -59,10 +65,11 @@ async def upload_chunk(
 
 
 @file_router.get("/upload-status/{upload_id}")
-def get_status(upload_id: str):
+def get_status(upload_id: str, current_user=Depends(get_current_user),):
     """
         Получаем список загруженных чанков
     """
+    verify_ownership(upload_id, current_user)
     upload_dir = TMP_DIR / upload_id
 
     if not upload_dir.exists():
@@ -82,10 +89,12 @@ def get_status(upload_id: str):
 def complete_upload(
     upload_id: str,
     total_chunks: int,
+    current_user=Depends(get_current_user), 
 ):
     """
         Завершаем загрузку и объединяем чанки
     """
+    verify_ownership(upload_id, current_user)
     upload_dir = TMP_DIR / upload_id
     if not upload_dir.exists():
         raise HTTPException(
@@ -116,10 +125,14 @@ def complete_upload(
 @file_router.post("/process")
 def process_file(
     body: ProcessRequest,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
         Запускаем обработку TIFF файла
     """
+    verify_ownership(body.upload_id, current_user)
+
     upload_dir = TMP_DIR / body.upload_id
     tif_path = upload_dir / f"{body.upload_id}.tif"
 
@@ -149,6 +162,13 @@ def process_file(
             detail=f"Processing failed: {str(e)}",
         )
 
+    create_analysis(
+        db,
+        user_id=current_user.id,
+        upload_id=body.upload_id,
+        algorithm=body.algorithm,
+    )
+
     return {
         "image_url": f"/file/image/{body.upload_id}/{body.algorithm}",
         "archive_url": f"/file/archive/{body.upload_id}/{body.algorithm}",
@@ -157,10 +177,11 @@ def process_file(
 
 
 @file_router.get("/image/{upload_id}/{algorithm}")
-def get_image(upload_id: str):
+def get_image(upload_id: str, current_user=Depends(get_current_user),):
     """
         Получаем PNG изображение результата
     """
+    verify_ownership(upload_id, current_user)
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.png"
 
     if not path.exists():
@@ -176,10 +197,11 @@ def get_image(upload_id: str):
 
 
 @file_router.get("/tif/{upload_id}/{algorithm}")
-def get_tif(upload_id: str):
+def get_tif(upload_id: str, current_user=Depends(get_current_user),):
     """
         Получаем TIFF файл результата
     """
+    verify_ownership(upload_id, current_user)
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.tif"
 
     if not path.exists():
@@ -196,10 +218,11 @@ def get_tif(upload_id: str):
 
 
 @file_router.get("/fertilization/{upload_id}/{algorithm}")
-def get_fertilization(upload_id: str):
+def get_fertilization(upload_id: str, current_user=Depends(get_current_user),):
     """
         Получаем JSON файл результата количества вносимых удобрений
     """
+    verify_ownership(upload_id, current_user)
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.json"
 
     if not path.exists():
@@ -212,7 +235,8 @@ def get_fertilization(upload_id: str):
     )
 
 @file_router.get("/archive/{upload_id}/{algorithm}")
-def get_archive(upload_id: str):
+def get_archive(upload_id: str, current_user=Depends(get_current_user),):
+    verify_ownership(upload_id, current_user)
     upload_dir = TMP_DIR / upload_id
     archive_path = build_result_archive(upload_dir, upload_id)
 

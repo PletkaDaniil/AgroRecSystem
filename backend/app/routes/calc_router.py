@@ -2,12 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import hashlib
+from sqlalchemy.orm import Session
+from app.database.crud import create_analysis
+from app.database.database import get_db
 from app.services.tiff_processing_service import ProcessingService
 from app.services.sentinel_download_service import SentinelDownloadService
 from app.utils.schemas.calcRequest import CalculatorRequest
 from app.utils.schemas.processRequest import Bands
 from app.utils.archive import build_result_archive
 from app.utils.auth import get_current_user
+from app.utils.verify import verify_ownership
 
 
 calculator_router = APIRouter(
@@ -23,6 +27,7 @@ sentinel_service = SentinelDownloadService()
 def process_coords(
     body: CalculatorRequest,
     current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
         Обработка поля по координатам через Sentinel-2
@@ -48,13 +53,7 @@ def process_coords(
                 out_path=tif_path,
             )
 
-        # настройка каналов Sentinel-2
-        bands = Bands(
-            nir=4,
-            red=1,
-            red_edge=2,
-            blue=3,
-        )
+        bands = Bands(nir=4, red=1, red_edge=2, blue=3)
 
         # запуск обработки TIFF файла
         processing_service.process_tiff(
@@ -67,16 +66,16 @@ def process_coords(
         )
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=str(e),
-        )
-
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Processing failed: {str(e)}",
-        )
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+    create_analysis(
+        db,
+        user_id=current_user.id,
+        upload_id=upload_id,
+        algorithm=body.algorithm,
+    )
 
     return {
         "image_url": f"/calculator/image/{upload_id}/{body.algorithm}",
@@ -86,68 +85,38 @@ def process_coords(
 
 
 @calculator_router.get("/image/{upload_id}/{algorithm}")
-def get_image(upload_id: str):
-    """
-        Получаем PNG результат сегментации
-    """
+def get_image(upload_id: str, algorithm: str, current_user=Depends(get_current_user)):
+    verify_ownership(upload_id, current_user)
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.png"
 
     if not path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="PNG not found",
-        )
-
-    return FileResponse(
-        path,
-        media_type="image/png",
-    )
+        raise HTTPException(status_code=404, detail="PNG not found")
+    return FileResponse(path, media_type="image/png")
 
 
 @calculator_router.get("/tif/{upload_id}/{algorithm}")
-def get_tif(upload_id: str):
-    """
-        Получаем TIFF результат сегментации
-    """
+def get_tif(upload_id: str, algorithm: str, current_user=Depends(get_current_user)):
+    verify_ownership(upload_id, current_user)
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.tif"
 
     if not path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="TIF not found",
-        )
-
-    return FileResponse(
-        path,
-        media_type="image/tiff",
-        filename=f"{upload_id}_result.tif",
-    )
+        raise HTTPException(status_code=404, detail="TIF not found")
+    return FileResponse(path, media_type="image/tiff", filename=f"{upload_id}_result.tif")
 
 
 @calculator_router.get("/fertilization/{upload_id}/{algorithm}")
-def get_fertilization(upload_id: str):
-    """
-        Получаем JSON файл результата количества вносимых удобрений
-    """
+def get_fertilization(upload_id: str, algorithm: str, current_user=Depends(get_current_user)):
+    verify_ownership(upload_id, current_user)
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.json"
 
     if not path.exists():
         raise HTTPException(404, "Fertilization JSON not found")
-
-    return FileResponse(
-        path,
-        media_type="application/json",
-        filename=f"{upload_id}.json",
-    )
+    return FileResponse(path, media_type="application/json", filename=f"{upload_id}.json")
 
 
 @calculator_router.get("/archive/{upload_id}/{algorithm}")
-def get_archive(upload_id: str):
+def get_archive(upload_id: str, algorithm: str, current_user=Depends(get_current_user)):
+    verify_ownership(upload_id, current_user)
     upload_dir = TMP_DIR / upload_id
     archive_path = build_result_archive(upload_dir, upload_id)
-
-    return FileResponse(
-        archive_path,
-        media_type="application/zip",
-        filename=f"{upload_id}_result.zip",
-    )
+    return FileResponse(archive_path, media_type="application/zip", filename=f"{upload_id}_result.zip")
