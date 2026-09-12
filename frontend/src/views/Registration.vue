@@ -155,7 +155,7 @@ const handleRegistration = async () => {
       password: password.value,
     })
 
-    router.push('/')
+    router.push('/cabinet')
 
   } catch (err) {
     const msg =

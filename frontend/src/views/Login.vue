@@ -53,10 +53,11 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { authApi } from '@/api/auth.api'
 
 const router = useRouter()
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
@@ -103,7 +104,7 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    router.push('/')
+    router.push(route.query.redirect || { name: 'Home' })
   } catch (err) {
     console.error('Login error:', err?.response?.data || err)
 
