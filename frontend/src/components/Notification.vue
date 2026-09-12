@@ -20,10 +20,13 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useAuth } from '@/router/useAuth'
 
 const visible = ref(false)
 const message = ref('')
 const type = ref('error')
+
+const { authState } = useAuth()
 
 const show = ({ msg, t = 'error' }) => {
   message.value = msg
@@ -35,6 +38,7 @@ const show = ({ msg, t = 'error' }) => {
 const close = () => { visible.value = false }
 
 window.addEventListener('auth-error', e => {
+  if (!authState.isAuthenticated) return
   const detail = e.detail
   let msg = detail
   if (detail === 'Missing refresh token') {
