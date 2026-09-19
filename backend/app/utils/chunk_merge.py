@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 
 
 def merge_chunks(
@@ -15,17 +16,23 @@ def merge_chunks(
     # путь к итоговому tif файлу
     final_path = upload_dir / f"{upload_id}.tif"
 
-    with open(final_path, "wb") as final:
+    tmp_path = upload_dir / f"{upload_id}.tif.merging"
+    try:
+        with open(tmp_path, "wb") as final:
 
-        # последовательно читаем каждый chunk
-        for index in range(total_chunks):
-
-            chunk_path = upload_dir / f"chunk_{index}"
-
-            with open(chunk_path, "rb") as chunk:
+            # последовательно читаем каждый chunk
+            for index in range(total_chunks):
+                chunk_path = upload_dir / f"chunk_{index}"
 
                 # читаем файл блоками по 1MB
-                while data := chunk.read(1024 * 1024):
-                    final.write(data)
+                with open(chunk_path, "rb") as chunk:
+                    shutil.copyfileobj(chunk, final, 8 * 1024 * 1024)
+
+        # теперь .tif появляется только целиком
+        tmp_path.replace(final_path)
+
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
     return final_path
