@@ -4,15 +4,6 @@
   <router-view />
 
   <Notification ref="notification" />
-
-  <div v-if="showLogin" class="fullscreen-overlay">
-    <div class="auth-card">
-      <h2>Вход в аккаунт</h2>
-      <input placeholder="Email" />
-      <input type="password" placeholder="Пароль" />
-      <button class="primary-btn">Войти</button>
-    </div>
-  </div>
   
   <CookieConsent />
 </template>
