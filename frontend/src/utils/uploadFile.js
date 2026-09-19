@@ -61,6 +61,26 @@ function splitChunks(file, chunkSize = CHUNK_SIZE) {
   return chunks
 }
 
+async function uploadChunkWithRetry(uploadId, index, blob, fileName) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const fd = new FormData()
+      fd.append('file', blob, fileName)
+      await api.post('/file/upload-chunk', fd, {
+        params: { upload_id: uploadId, chunk_index: index },
+        timeout: 120_000,
+      })
+      return
+    } catch (e) {
+      const status = e.response?.status
+      // без ответа = сеть/DNS; 5xx, 408, 429 = временные сбои
+      const retryable = !status || status >= 500 || status === 408 || status === 429
+      if (!retryable || attempt >= 8) throw e
+      await new Promise(r => setTimeout(r, Math.min(1000 * 2 ** attempt, 30000)))
+    }
+  }
+}
+
 export async function uploadFile(
   file,
   formula,
@@ -103,16 +123,7 @@ export async function uploadFile(
         continue
       }
 
-      const fd = new FormData()
-      fd.append('file', chunks[i], file.name)
-
-      try {
-        await api.post('/file/upload-chunk', fd, {
-          params: { upload_id: uploadId, chunk_index: i },
-        })
-      } catch (error) {
-        throw error
-      }
+      await uploadChunkWithRetry(uploadId, i, chunks[i], file.name)
 
       progress(5 + ((i + 1) / total) * 75)
     }
