@@ -1,6 +1,6 @@
 import zipfile
 from pathlib import Path
-from fastapi import HTTPException
+from app.utils.exceptions import NotFoundError
 
 # Указываем, какие файлы включаем в архив и под каким именем отдаем
 ARCHIVE_MEMBERS = {
@@ -29,6 +29,6 @@ def build_result_archive(upload_dir: Path, upload_id: str) -> Path:
 
     if not found_any:
         archive_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=404, detail="Result files not found")
+        raise NotFoundError("Result files not found")
 
     return archive_path

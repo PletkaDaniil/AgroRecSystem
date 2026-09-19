@@ -1,16 +1,18 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import Response, HTTPException, status, Cookie, Depends
+from fastapi import Response, Cookie, Depends
 from sqlalchemy.orm import Session
+import jwt
 
 from app.database.crud import (
     create_refresh_token as db_create_refresh_token,
     get_user_by_id,
     get_refresh_token_by_user,
-    update_refresh_token
+    update_refresh_token,
 )
 from app.database.database import get_db
 from app.utils.jwt import create_access_token, create_refresh_token, decode_jwt
 from app.config.config import settings
+from app.utils.exceptions import ForbiddenError, UnauthorizedError
 
 
 def set_cookies(response: Response, access_token: str, refresh_token: str):
@@ -43,20 +45,13 @@ def decode_refresh(token: str) -> str:
     try:
         payload = decode_jwt(token)
         jti = payload.get("jti")
-
         if not jti:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid refresh token",
-            )
-
+            raise ForbiddenError("Invalid refresh token")
         return jti
-
+    except ForbiddenError:
+        raise
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid refresh token",
-        )
+        raise ForbiddenError("Invalid refresh token")
 
 
 def issue_tokens(db: Session, user_id: int) -> tuple[str, str]:
@@ -107,35 +102,25 @@ def get_current_user(
 
     # проверяем наличие access токена
     if not access_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No access token in cookies",
-        )
-
+        raise UnauthorizedError("No access token in cookies")
+    
     try:
-        # декодируем JWT и извлекаем id пользователя
         payload = decode_jwt(access_token)
-        user_id = payload.get("sub")
 
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid token payload",
-            )
-
+    except jwt.ExpiredSignatureError:
+        raise UnauthorizedError("Access token expired")
+    
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid access token",
-        )
+        raise ForbiddenError("Invalid access token")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise ForbiddenError("Invalid token payload")
 
     # получаем пользователя из БД
     user = get_user_by_id(db, int(user_id))
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User not found",
-        )
+        raise ForbiddenError("User not found")
 
     return user

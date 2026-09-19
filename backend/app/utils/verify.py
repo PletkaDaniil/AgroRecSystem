@@ -1,11 +1,8 @@
-from fastapi import HTTPException, status
+from app.utils.exceptions import ForbiddenError
 
 def verify_ownership(upload_id: str, current_user) -> None:
     """
         Проверяем, что upload_id принадлежит текущему пользователю
     """
     if not upload_id.startswith(f"{current_user.id}_"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied",
-        )
+        raise ForbiddenError("Access denied")

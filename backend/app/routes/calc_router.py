@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, logger
 from fastapi.responses import FileResponse
 from pathlib import Path
 import hashlib
@@ -12,6 +12,7 @@ from app.utils.schemas.processRequest import Bands
 from app.utils.archive import build_result_archive
 from app.utils.auth import get_current_user
 from app.utils.verify import verify_ownership
+from app.utils.exceptions import NotFoundError, BadRequestError, ExternalServiceError
 
 
 calculator_router = APIRouter(
@@ -42,20 +43,22 @@ def process_coords(
     upload_dir.mkdir(parents=True, exist_ok=True)
     tif_path = upload_dir / f"{upload_id}.tif"
 
-    try:
-
-        # проверяем существует ли TIFF файл локально
-        # если файла нет — скачиваем Sentinel снимок
-        if not tif_path.exists():
+    # проверяем существует ли TIFF файл локально
+    # если файла нет — скачиваем Sentinel снимок
+    if not tif_path.exists():
+        try:
             sentinel_service.download_tiff(
                 bbox=[body.lon1, body.lat1, body.lon2, body.lat2],
                 date=body.snap_date,
                 out_path=tif_path,
             )
+        except Exception as e:
+            logger.exception(f"Failed to download Sentinel image: {e}")
+            raise ExternalServiceError("Не удалось загрузить снимок со спутника. Попробуйте позже.")
 
-        bands = Bands(nir=4, red=1, red_edge=2, blue=3)
+    bands = Bands(nir=4, red=1, red_edge=2, blue=3)
 
-        # запуск обработки TIFF файла
+    try:
         processing_service.process_tiff(
             tif_path=tif_path,
             algorithm=body.algorithm,
@@ -66,21 +69,14 @@ def process_coords(
         )
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+        raise BadRequestError(str(e))
 
-    create_analysis(
-        db,
-        user_id=current_user.id,
-        upload_id=upload_id,
-        algorithm=body.algorithm,
-    )
+    create_analysis(db, user_id=current_user.id, upload_id=upload_id, algorithm=body.algorithm)
 
     return {
         "image_url": f"/calculator/image/{upload_id}/{body.algorithm}",
         "archive_url": f"/file/archive/{upload_id}/{body.algorithm}",
-        "fert_url": f"/file/fertilization/{upload_id}/{body.algorithm}"
+        "fert_url": f"/file/fertilization/{upload_id}/{body.algorithm}",
     }
 
 
@@ -90,7 +86,7 @@ def get_image(upload_id: str, algorithm: str, current_user=Depends(get_current_u
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.png"
 
     if not path.exists():
-        raise HTTPException(status_code=404, detail="PNG not found")
+        raise NotFoundError("PNG not found")
     return FileResponse(path, media_type="image/png")
 
 
@@ -100,7 +96,7 @@ def get_tif(upload_id: str, algorithm: str, current_user=Depends(get_current_use
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.tif"
 
     if not path.exists():
-        raise HTTPException(status_code=404, detail="TIF not found")
+         raise NotFoundError("TIF not found")
     return FileResponse(path, media_type="image/tiff", filename=f"{upload_id}_result.tif")
 
 
@@ -110,7 +106,7 @@ def get_fertilization(upload_id: str, algorithm: str, current_user=Depends(get_c
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.json"
 
     if not path.exists():
-        raise HTTPException(404, "Fertilization JSON not found")
+        raise NotFoundError("Fertilization JSON not found")
     return FileResponse(path, media_type="application/json", filename=f"{upload_id}.json")
 
 
@@ -118,5 +114,8 @@ def get_fertilization(upload_id: str, algorithm: str, current_user=Depends(get_c
 def get_archive(upload_id: str, algorithm: str, current_user=Depends(get_current_user)):
     verify_ownership(upload_id, current_user)
     upload_dir = TMP_DIR / upload_id
-    archive_path = build_result_archive(upload_dir, upload_id)
+    try:
+        archive_path = build_result_archive(upload_dir, upload_id)
+    except FileNotFoundError as e:
+        raise NotFoundError(f"Result files not found: {e}")
     return FileResponse(archive_path, media_type="application/zip", filename=f"{upload_id}_result.zip")

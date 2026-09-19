@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, HTTPException, Depends, status
+from fastapi import APIRouter, UploadFile, Depends, status
 from fastapi.responses import FileResponse
 from pathlib import Path
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from app.utils.schemas.processRequest import ProcessRequest
 from app.utils.archive import build_result_archive
 from app.utils.auth import get_current_user
 from app.utils.verify import verify_ownership
+from app.utils.exceptions import NotFoundError, BadRequestError, InternalServerError
 
 
 file_router = APIRouter(
@@ -50,18 +51,10 @@ async def upload_chunk(
     """
     verify_ownership(upload_id, current_user)
     try:
-        await upload_service.save_chunk(
-            upload_id,
-            chunk_index,
-            file,
-        )
-        return {"status": "ok"}
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save chunk: {str(e)}",
-        )
+        await upload_service.save_chunk(upload_id, chunk_index, file)
+    except OSError as e:
+        raise InternalServerError(f"Failed to save chunk: {e}")
+    return {"status": "ok"}
 
 
 @file_router.get("/upload-status/{upload_id}")
@@ -77,12 +70,7 @@ def get_status(upload_id: str, current_user=Depends(get_current_user),):
 
     chunk_files = list(upload_dir.glob("chunk_*"))
 
-    uploaded_indices = sorted(
-        int(p.name.split("_")[1])
-        for p in chunk_files
-    )
-
-    return uploaded_indices
+    return sorted(int(p.name.split("_")[1]) for p in chunk_files)
 
 
 @file_router.post("/upload-complete")
@@ -97,29 +85,17 @@ def complete_upload(
     verify_ownership(upload_id, current_user)
     upload_dir = TMP_DIR / upload_id
     if not upload_dir.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Upload directory not found",
-        )
+        raise NotFoundError("Upload directory not found")
 
     try:
-        final_file = merge_chunks(
-            upload_id,
-            total_chunks,
-            TMP_DIR,
-        )
-        for chunk_file in upload_dir.glob("chunk_*"):
-            chunk_file.unlink()
+        final_file = merge_chunks(upload_id, total_chunks, TMP_DIR)
+    except FileNotFoundError as e:
+        raise NotFoundError(f"Chunk missing: {e}")
 
-        return {
-            "file_path": str(final_file),
-        }
+    for chunk_file in upload_dir.glob("chunk_*"):
+        chunk_file.unlink()
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to merge chunks: {str(e)}",
-        )
+    return {"file_path": str(final_file)}
 
 
 @file_router.post("/process")
@@ -137,10 +113,8 @@ def process_file(
     tif_path = upload_dir / f"{body.upload_id}.tif"
 
     if not tif_path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="TIF file not found",
-        )
+        raise NotFoundError("TIF file not found")
+    
     try:
         processing_service.process_tiff(
             tif_path=tif_path,
@@ -151,28 +125,14 @@ def process_file(
             bands=body.bands,
         )
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+        raise BadRequestError(str(e))
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Processing failed: {str(e)}",
-        )
-
-    create_analysis(
-        db,
-        user_id=current_user.id,
-        upload_id=body.upload_id,
-        algorithm=body.algorithm,
-    )
+    create_analysis(db, user_id=current_user.id, upload_id=body.upload_id, algorithm=body.algorithm)
 
     return {
         "image_url": f"/file/image/{body.upload_id}/{body.algorithm}",
         "archive_url": f"/file/archive/{body.upload_id}/{body.algorithm}",
-        "fert_url": f"/file/fertilization/{body.upload_id}/{body.algorithm}"
+        "fert_url": f"/file/fertilization/{body.upload_id}/{body.algorithm}",
     }
 
 
@@ -185,15 +145,9 @@ def get_image(upload_id: str, current_user=Depends(get_current_user),):
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.png"
 
     if not path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="PNG not found",
-        )
+        raise NotFoundError("PNG not found")
 
-    return FileResponse(
-        path,
-        media_type="image/png",
-    )
+    return FileResponse(path, media_type="image/png")
 
 
 @file_router.get("/tif/{upload_id}/{algorithm}")
@@ -205,10 +159,7 @@ def get_tif(upload_id: str, current_user=Depends(get_current_user),):
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.tif"
 
     if not path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="TIF not found",
-        )
+        raise NotFoundError("TIF not found")
 
     return FileResponse(
         path,
@@ -226,7 +177,7 @@ def get_fertilization(upload_id: str, current_user=Depends(get_current_user),):
     path = TMP_DIR / upload_id / f"{upload_id}_result_1m_seg.json"
 
     if not path.exists():
-        raise HTTPException(404, "Fertilization JSON not found")
+        raise NotFoundError("Fertilization JSON not found")
 
     return FileResponse(
         path,
@@ -238,7 +189,10 @@ def get_fertilization(upload_id: str, current_user=Depends(get_current_user),):
 def get_archive(upload_id: str, current_user=Depends(get_current_user),):
     verify_ownership(upload_id, current_user)
     upload_dir = TMP_DIR / upload_id
-    archive_path = build_result_archive(upload_dir, upload_id)
+    try:
+        archive_path = build_result_archive(upload_dir, upload_id)
+    except FileNotFoundError as e:
+        raise NotFoundError(f"Result files not found: {e}")
 
     return FileResponse(
         archive_path,

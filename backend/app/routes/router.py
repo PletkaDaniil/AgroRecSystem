@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response, HTTPException, status, Cookie
+from fastapi import APIRouter, Depends, Response, status, Cookie
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.database.crud import (
@@ -6,13 +6,14 @@ from app.database.crud import (
     get_refresh_token_by_token,
     get_user_by_name,
     get_user_by_email,
-    create_user
+    create_user,
 )
 from app.utils.password import hash_password, validate_password
 from app.utils.auth import set_cookies, decode_refresh, issue_tokens
 from app.utils.schemas.user import RegistrationRequest, LoginRequest
 from app.config.config import settings
 from app.utils.jwt import decode_jwt
+from app.utils.exceptions import ConflictError, UnauthorizedError, ForbiddenError
 from datetime import datetime, timezone
 
 
@@ -26,7 +27,7 @@ def registration(response: Response, data: RegistrationRequest, db: Session = De
     """
     # проверяем, что username или email ещё не заняты
     if get_user_by_name(db, data.username) or get_user_by_email(db, data.email):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already exists")
+        raise ConflictError("User already exists")
     
     # создаем пользователя 
     hashed_password = hash_password(data.password)
@@ -59,10 +60,7 @@ def login(response: Response, data: LoginRequest, db: Session = Depends(get_db))
 
     # + проверяем пароль
     if not user or not validate_password(data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username/email or password"
-        )
+        raise UnauthorizedError("Invalid username/email or password")
 
     # выдаем токены
     access_token, refresh_token = issue_tokens(db, user.id)
@@ -81,18 +79,18 @@ def refresh_tokens(
         Обновление access и refresh токенов
     """
     if not refresh_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
+        raise UnauthorizedError("Missing refresh token")
 
     #получаем jti и инфу о токене из БД
     jti = decode_refresh(refresh_token)
     token_obj = get_refresh_token_by_token(db, token=jti)
 
     if not token_obj:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token not found")
+        raise ForbiddenError("Refresh token not found")
 
     # проверяем истечение срока действия
     if token_obj.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token expired")
+        raise ForbiddenError("Refresh token expired")
 
     # + новая пара токенов
     new_access_token, new_refresh_token = issue_tokens(db, token_obj.user_id)
@@ -110,21 +108,23 @@ def validate_user(
         Проверка валидности access token и получение информации о пользователе
     """
     if not access_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No access token")
+        raise UnauthorizedError("No access token")
 
     try:
         # смотрим токен доступа и user_id
         payload = decode_jwt(access_token)
         user_id = payload.get("sub")
         if not user_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
+            raise ForbiddenError("Invalid token")
+    except ForbiddenError:
+        raise
     except Exception:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
+        raise ForbiddenError("Invalid token")
 
     # проверяем, существует ли пользователь
     user = get_user_by_id(db, int(user_id))
     if not user:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not found")
+        raise ForbiddenError("User not found")
 
     return {"user_id": user.id, "role": user.role.value}
 
