@@ -8,7 +8,7 @@ const authState = reactive({
 
 async function fetchUser() {
   try {
-    const { data } = await api.get('/users/me')
+    const { data } = await api.get('/users/me', { silent: true })
     authState.user = data
     authState.isAuthenticated = true
     return true
