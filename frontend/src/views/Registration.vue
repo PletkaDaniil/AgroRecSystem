@@ -158,11 +158,16 @@ const handleRegistration = async () => {
     router.push('/cabinet')
 
   } catch (err) {
-    const msg =
-      err.response?.data?.detail ||
-      'Ошибка регистрации. Попробуйте позже'
+    const errorCode = err?.response?.data?.error
+    const message   = err?.response?.data?.message
 
-    showError(msg)
+    if (errorCode === 'conflict') {
+      showError('Пользователь с таким именем или email уже существует', ['username', 'email'])
+    } else if (message) {
+      showError(message)
+    } else {
+      showError('Ошибка регистрации. Попробуйте позже')
+    }
   }
 }
 </script>

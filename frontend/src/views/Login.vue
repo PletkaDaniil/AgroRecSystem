@@ -103,27 +103,18 @@ const handleLogin = async () => {
       username: email.value,
       password: password.value,
     })
-
+    
     router.push(route.query.redirect || { name: 'Home' })
   } catch (err) {
     console.error('Login error:', err?.response?.data || err)
 
-    const detail = err?.response?.data?.detail
+    const errorCode = err?.response?.data?.error
+    const message   = err?.response?.data?.message
 
-    if (detail) {
-      let userFriendlyMsg = detail
-      let fieldsToHighlight = ['email', 'password']
-
-      if (detail === 'Invalid username or password') {
-        userFriendlyMsg = 'Неверный логин или пароль'
-      } else if (detail.includes('not found')) {
-        userFriendlyMsg = 'Пользователь не найден'
-      } else if (detail.includes('blocked')) {
-        userFriendlyMsg = 'Аккаунт заблокирован'
-        fieldsToHighlight = []
-      }
-
-      showError(userFriendlyMsg, fieldsToHighlight)
+    if (errorCode === 'unauthorized') {
+      showError('Неверный логин или пароль', ['email', 'password'])
+    } else if (message) {
+      showError(message)
     } else {
       showError('Ошибка входа. Попробуйте позже')
     }
