@@ -38,13 +38,26 @@ const show = ({ msg, t = 'error' }) => {
 const close = () => { visible.value = false }
 
 window.addEventListener('auth-error', e => {
-  if (!authState.isAuthenticated) return
   const detail = e.detail
-  let msg = detail
+
   if (detail === 'Missing refresh token') {
-    msg = 'Пожалуйста, войдите в личный кабинет'
+    show({
+      msg: 'Пожалуйста, войдите в личный кабинет',
+      t: 'error'
+    })
+    return
   }
-  show({ msg, t: 'error' })
+
+  if (!authState.isAuthenticated) return
+
+  show({
+    msg: detail,
+    t: 'error'
+  })
+})
+
+window.addEventListener('app-error', e => {
+  show({ msg: e.detail, t: 'error' })
 })
 
 defineExpose({ show })
