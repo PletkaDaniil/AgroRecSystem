@@ -2,9 +2,7 @@ from fastapi import APIRouter, Depends
 from app.database.database import get_db
 from sqlalchemy.orm import Session
 from app.database.crud import get_latest_analyses_by_user
-from fastapi import APIRouter, Depends
 from app.utils.auth import get_current_user
-from app.config.config import settings
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 
