@@ -769,12 +769,25 @@ const validate = () => {
   return validateFile()
 }
 
+function reportError(err, fallback = 'Что-то пошло не так') {
+  if (err?.isAuthError) return
+
+  const msg = err?.response?.data?.message || fallback
+
+  window.dispatchEvent(
+    new CustomEvent('app-error', {
+      detail: msg
+    })
+  )
+}
+
 const runAnalysis = async () => {
   if (!validate()) return
 
   try {
     await api.post('/auth/validate')
-  } catch {
+  } catch (err) {
+    reportError(err, 'Необходимо войти в аккаунт')
     return
   }
 
@@ -816,7 +829,7 @@ const runAnalysis = async () => {
       uploadStage.value = 'done'
     } else {
       uploadStage.value = 'processing'
-      const { data } = await api.post('/calculator', {
+      const { data } = await api.post('/calculator/', {
         lat1:      coordLat1.value,
         lon1:      coordLon1.value,
         lat2:      coordLat2.value,
@@ -864,7 +877,9 @@ const runAnalysis = async () => {
       `Фаза: ${_growth}. Сегментов: ${_seg}.` +
       (_dateStr ? ` Снимок за ${_dateStr}.` : '')
 
-  } catch {}
+  } catch (err){
+    reportError(err, 'Не удалось выполнить анализ')
+  }
   finally {
     isLoading.value = false
   }
