@@ -40,6 +40,9 @@ api.interceptors.response.use(
     // если 401 и это не auth запрос и ещё не было retry
     if (status === 401 && !originalRequest._retry && !isAuthRoute) {
 
+      // помечаем запрос сразу, чтобы он не пошёл на refresh второй раз
+      originalRequest._retry = true
+
       // если refresh уже выполняется — просто подписываемся на результат
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -50,16 +53,14 @@ api.interceptors.response.use(
         })
       }
 
-      originalRequest._retry = true
       isRefreshing = true
 
-      try {
-        // refresh должен отработать быстро, поэтому ставим таймаут
-        const controller = new AbortController()
-        const refreshTimeout = setTimeout(() => controller.abort(), 15_000)
+      // refresh должен отработать быстро, поэтому ставим таймаут
+      const controller = new AbortController()
+      const refreshTimeout = setTimeout(() => controller.abort(), 15_000)
 
+      try {
         await api.post('/auth/refresh', null, { signal: controller.signal })
-        clearTimeout(refreshTimeout)
 
         isRefreshing = false
         onRefreshed(true)
@@ -71,14 +72,22 @@ api.interceptors.response.use(
         isRefreshing = false
         onRefreshed(false)
 
-        // глобальное событие: разлогин / ошибка авторизации
-        window.dispatchEvent(
-          new CustomEvent('auth-error', {
-            detail: refreshError.response?.data?.detail
-          })
-        )
+        refreshError.isAuthError = true
+
+        // тихая проверка сессии (например, при переходе в кабинет)
+        // не нужно показывать уведомление
+        if (!originalRequest.silent) {
+          window.dispatchEvent(
+            new CustomEvent('auth-error', {
+              detail: refreshError.response?.data?.message
+            })
+          )
+        }
 
         return Promise.reject(refreshError)
+
+      } finally {
+        clearTimeout(refreshTimeout)
       }
     }
 
