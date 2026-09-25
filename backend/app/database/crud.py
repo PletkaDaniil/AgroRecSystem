@@ -241,6 +241,22 @@ def get_latest_analyses_by_user(
     )
 
 
+def get_analyses_count_by_user(
+    db: Session,
+    *,
+    user_id: int,
+) -> int:
+    """
+        Считаем общее количество анализов пользователя (для статистики в лично кабинете)
+        Не путать с get_latest_analyses_by_user — тот возвращает только последние N записей
+    """
+    return (
+        db.query(Analysis)
+        .filter(Analysis.user_id == user_id)
+        .count()
+    )
+
+
 def get_analysis_by_id(
     db: Session,
     analysis_id: int,
