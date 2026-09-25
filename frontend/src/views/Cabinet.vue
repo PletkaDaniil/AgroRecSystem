@@ -19,7 +19,7 @@
 
       <div class="cabinet-stats" v-if="user">
         <div class="stat">
-          <span class="stat-num">{{ analyses.length }}</span>
+          <span class="stat-num">{{ user?.analyses_count ?? 0 }}</span>
           <span class="stat-label">Анализов выполнено</span>
         </div>
         <div class="stat-div"></div>
