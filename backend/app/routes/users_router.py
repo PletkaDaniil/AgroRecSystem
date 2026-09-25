@@ -1,19 +1,23 @@
 from fastapi import APIRouter, Depends
 from app.database.database import get_db
 from sqlalchemy.orm import Session
-from app.database.crud import get_latest_analyses_by_user
+from app.database.crud import get_latest_analyses_by_user, get_analyses_count_by_user
 from app.utils.auth import get_current_user
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 
 @users_router.get("/me")
-def get_me(user = Depends(get_current_user)) -> dict:
+def get_me(
+    user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
     return {
         "id": user.id,
         "username": user.name,
         "email": user.email,
         "role": user.role.value,
         "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
+        "analyses_count": get_analyses_count_by_user(db, user_id=user.id),
     }
 
 
