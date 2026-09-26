@@ -79,6 +79,10 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Файл
             </button>
+            <button :class="['mode-btn', inputMode === 'demo' ? 'mode-btn--active' : '']" @click="inputMode = 'demo'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Демо
+            </button>
           </div>
 
           <Transition name="slide-fade" mode="out-in">
@@ -198,7 +202,7 @@
               </div>
             </div>
 
-            <div v-else key="file" class="input-section">
+            <div v-else-if="inputMode === 'file'" key="file" class="input-section">
               <div
                 :class="['dropzone', dragOver ? 'dropzone--active' : '', uploadedFile ? 'dropzone--filled' : '']"
                 @dragover.prevent="dragOver = true"
@@ -305,31 +309,68 @@
                 <p class="seg-hint">{{ segHints[fileSegmentationLevel] }}</p>
               </div>
             </div>
-          </Transition>
-
-          <div class="section-sep"><span>Метод анализа</span></div>
-
-          <div class="formula-list">
-            <div
-              v-for="f in availableFormulas"
-              :key="f.id"
-              :class="['formula-item', selectedFormula === f.id ? 'formula-item--active' : '']"
-              @click="selectedFormula = f.id"
-            >
-              <div class="formula-radio">
-                <div v-if="selectedFormula === f.id" class="formula-radio-dot"></div>
+            <div v-else key="demo" class="input-section">
+              <div v-if="!demos.length" class="demo-empty">Демо-проекты пока недоступны</div>
+              <div v-else class="demo-list">
+                <div
+                  v-for="d in demos"
+                  :key="d.id"
+                  :class="['demo-card', selectedDemoId === d.id ? 'demo-card--active' : '']"
+                  @click="selectedDemoId = d.id"
+                >
+                  <img :src="demoPreview(d)" :alt="d.title" class="demo-thumb" />
+                  <div class="demo-info">
+                    <span class="demo-title">{{ d.title }}</span>
+                    <span class="demo-sub">{{ d.description }}</span>
+                    <div class="demo-tags">
+                      <span class="demo-tag">{{ d.algorithm }}</span>
+                      <span class="demo-tag">{{ growthLabel(d.growth_stage) }}</span>
+                      <span class="demo-tag">{{ formatIsoDate(d.date) }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <span class="formula-name">{{ f.name }}</span>
 
-              <div class="tip-wrap" @mouseenter="activeTooltip = f.id" @mouseleave="activeTooltip = null">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                <Transition name="tip">
-                  <div v-if="activeTooltip === f.id" class="tip-box">{{ f.description }}</div>
-                </Transition>
+              <div class="section-sep"><span>Сегментация</span></div>
+              <div class="seg-block">
+                <div class="seg-header">
+                  <span class="seg-label">Число сегментов разделения поля</span>
+                  <span class="seg-val">{{ demoSegmentationLevel }}</span>
+                </div>
+                <div class="seg-track-wrap">
+                  <input type="range" min="3" max="5" step="1" v-model.number="demoSegmentationLevel" class="seg-range" />
+                  <div class="seg-ticks">
+                    <span v-for="n in [3,4,5]" :key="n" :class="['seg-tick', demoSegmentationLevel === n ? 'seg-tick--active' : '']">{{ n }}</span>
+                  </div>
+                </div>
+                <p class="seg-hint">{{ segHints[demoSegmentationLevel] }}</p>
               </div>
             </div>
-          </div>
+          </Transition>
 
+          <template v-if="inputMode !== 'demo'">
+            <div class="section-sep"><span>Метод анализа</span></div>
+            <div class="formula-list">
+              <div
+                v-for="f in availableFormulas"
+                :key="f.id"
+                :class="['formula-item', selectedFormula === f.id ? 'formula-item--active' : '']"
+                @click="selectedFormula = f.id"
+              >
+                <div class="formula-radio">
+                  <div v-if="selectedFormula === f.id" class="formula-radio-dot"></div>
+                </div>
+                <span class="formula-name">{{ f.name }}</span>
+
+                <div class="tip-wrap" @mouseenter="activeTooltip = f.id" @mouseleave="activeTooltip = null">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <Transition name="tip">
+                    <div v-if="activeTooltip === f.id" class="tip-box">{{ f.description }}</div>
+                  </Transition>
+                </div>
+              </div>
+            </div>
+          </template>
           <Transition name="slide-fade">
             <div v-if="validationError" class="validation-error">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -471,10 +512,14 @@
 import ndviPhoto from '../components/images/main_photo_ndvi.png'
 import chlriPhoto from '../components/images/main_photo_chlri.png'
 import primodPhoto from '../components/images/main_photo_primod.png'
-import { ref, reactive, computed } from 'vue'
+import demo1Preview from '../components/images/demo_1.png'
+import demo2Preview from '../components/images/demo_2.png'
+import demo3Preview from '../components/images/demo_3.png'
+import { ref, reactive, computed, watch } from 'vue'
 import api from '@/api/http'
 import SupportBanner from '@/components/SupportBanner.vue'
 import { uploadFile } from '@/utils/uploadFile'
+import { authApi } from '@/api/auth.api'
 
 const galleryCards = [
   { method: 'NDVI', color: 'green', img: ndviPhoto },
@@ -536,8 +581,66 @@ const selectedFormula = ref(null)
 const coordSelectedGrowth = ref(null)
 const fileSelectedGrowth  = ref(null)
 
+// демо-проекты для быстрого вызова пользователем
+const DEMO_PREVIEWS = {
+  'demo-1': demo1Preview,
+  'demo-2': demo2Preview,
+  'demo-3': demo3Preview,
+}
+
+const demos = ref([
+  {
+    id: 'demo-1',
+    title: 'Пример 1',
+    description: 'Гиперспектральная-съёмка, фаза «выход в трубку»',
+    date: '2024-06-11',
+    algorithm: 'ChlRI',
+    growth_stage: 'booting',
+  },
+  {
+    id: 'demo-2',
+    title: 'Пример 2',
+    description: 'Гиперспектральная-съёмка, фаза «выход в трубку»',
+    date: '2024-06-11',
+    algorithm: 'NDVI',
+    growth_stage: 'booting',
+  },
+  {
+    id: 'demo-3',
+    title: 'Пример 3',
+    description: 'Гиперспектральная-съёмка, фаза «выход в трубку»',
+    date: '2024-06-11',
+    algorithm: 'PRImod',
+    growth_stage: 'booting',
+  },
+])
+const selectedDemoId = ref(demos.value[0]?.id ?? null)
+const demoSegmentationLevel = ref(3)
+
+const selectedDemo = computed(() => demos.value.find(d => d.id === selectedDemoId.value) ?? null)
+
+const demoPreview = (d) => DEMO_PREVIEWS[d.id]
+const growthLabel = (id) => growthStages.find(g => g.id === id)?.label ?? id
+const formatIsoDate = (iso) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return formatDate(d, m, y)
+}
+
+// метод и фаза роста берутся из выбранного демо
+const syncDemoFormula = () => {
+  if (inputMode.value === 'demo') selectedFormula.value = selectedDemo.value?.algorithm ?? null
+}
+watch(inputMode, (mode, prev) => {
+  if (mode === 'demo') syncDemoFormula()
+  else if (prev === 'demo') selectedFormula.value = null
+})
+watch(selectedDemo, syncDemoFormula)
+
+
 const selectedGrowth = computed(() =>
-  inputMode.value === 'coords' ? coordSelectedGrowth.value : fileSelectedGrowth.value
+  inputMode.value === 'demo'   ? selectedDemo.value?.growth_stage
+  : inputMode.value === 'coords' ? coordSelectedGrowth.value
+  : fileSelectedGrowth.value
 )
 
 const growthStages = [
@@ -595,7 +698,9 @@ const coordSegmentationLevel = ref(3)
 const fileSegmentationLevel  = ref(3)
 
 const segmentationLevel = computed(() =>
-  inputMode.value === 'coords' ? coordSegmentationLevel.value : fileSegmentationLevel.value
+  inputMode.value === 'demo'   ? demoSegmentationLevel.value
+  : inputMode.value === 'coords' ? coordSegmentationLevel.value
+  : fileSegmentationLevel.value
 )
 
 const segHints = {
@@ -752,10 +857,20 @@ const validateFile = () => {
   return true
 }
 
+const validateDemo = () => {
+  if (!selectedDemo.value) {
+    validationError.value = 'Выберите демонстрационный проект'
+    return false
+  }
+  return true
+}
+
 const validate = () => {
   validationError.value = ''
   resolutionError.value = ''
   dateError.value = ''
+
+  if (inputMode.value === 'demo') return validateDemo()
 
   if (!selectedFormula.value) {
     validationError.value = 'Выберите метод анализа'
@@ -784,11 +899,13 @@ function reportError(err, fallback = 'Что-то пошло не так') {
 const runAnalysis = async () => {
   if (!validate()) return
 
-  try {
-    await api.post('/auth/validate')
-  } catch (err) {
-    reportError(err, 'Необходимо войти в аккаунт')
-    return
+  if (inputMode.value !== 'demo') {
+    try {
+      await authApi.validate()
+    } catch (err) {
+      reportError(err, 'Необходимо войти в аккаунт')
+      return
+    }
   }
 
   isLoading.value      = true
@@ -827,6 +944,15 @@ const runAnalysis = async () => {
         }
       ))
       uploadStage.value = 'done'
+    } else if (inputMode.value === 'demo') {
+      uploadStage.value = 'processing'
+      const { data } = await api.post('/demo/run', {
+        demo_id: selectedDemoId.value,
+        segmentation_level: segmentationLevel.value,
+      })
+      imageUrl   = data.image_url
+      archiveUrl = data.archive_url
+      fertUrl    = data.fert_url
     } else {
       uploadStage.value = 'processing'
       const { data } = await api.post('/calculator/', {
@@ -860,9 +986,12 @@ const runAnalysis = async () => {
     const _ts     = new Date().toLocaleString('ru-RU')
     const _growth = growthStages.find(g => g.id === selectedGrowth.value)?.label
     const _seg    = segmentationLevel.value
-    const _dateStr = (inputMode.value === 'coords' && snapDay.value)
-      ? formatDate(snapDay.value, snapMonth.value, snapYear.value)
-      : null
+    const _isDemo = inputMode.value === 'demo'
+    const _dateStr = _isDemo
+      ? formatIsoDate(selectedDemo.value.date)
+      : (inputMode.value === 'coords' && snapDay.value)
+        ? formatDate(snapDay.value, snapMonth.value, snapYear.value)
+        : null
 
     resultMeta.formula    = selectedFormula.value
     resultMeta.mode       = inputMode.value
@@ -870,7 +999,9 @@ const runAnalysis = async () => {
       ? `${coordLat1.value}, ${coordLon1.value} → ${coordLat2.value}, ${coordLon2.value}`
       : null
     resultMeta.date       = _dateStr
-    resultMeta.file       = inputMode.value === 'file' && uploadedFile.value ? uploadedFile.value.name : null
+    resultMeta.file = _isDemo
+      ? selectedDemo.value.title
+      : (inputMode.value === 'file' && uploadedFile.value ? uploadedFile.value.name : null)
     resultMeta.timestamp  = _ts
     resultMeta.description =
       `Результат получен методом ${getFormulaName(selectedFormula.value)}. ` +
@@ -1649,4 +1780,23 @@ const exportResult = () => {
   .workspace    { grid-template-columns: 1fr; }
   .panel-left   { border-right: none; border-bottom: 1px solid #e8eaee; }
 }
+.demo-list { display: flex; flex-direction: column; gap: 8px; }
+.demo-card {
+  display: flex; gap: 12px; padding: 10px;
+  border: 1px solid #e8eaee; border-radius: 9px;
+  background: #f9fafb; cursor: pointer; transition: all 0.15s;
+}
+.demo-card:hover { background: #f3f4f6; }
+.demo-card--active { background: rgba(61,108,232,0.05); border-color: rgba(61,108,232,0.35); }
+.demo-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: #e8eaee; }
+.demo-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.demo-title { font-size: 12px; font-weight: 700; color: #1a1d23; }
+.demo-sub { font-size: 11px; color: #9ca3af; line-height: 1.4; }
+.demo-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.demo-tag {
+  font-size: 9px; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+  padding: 2px 6px; border-radius: 4px;
+  background: rgba(61,108,232,0.07); color: #3d6ce8;
+}
+.demo-empty { font-size: 12px; color: #9ca3af; text-align: center; padding: 20px 0; }
 </style>
