@@ -113,7 +113,7 @@ const displayName = (item) => {
 }
 
 const methodColor = (algorithm) => ({
-  NDVI: 'green', ChlRI: 'blue', RPImod: 'amber',
+  NDVI: 'green', ChlRI: 'blue', PRImod: 'amber',
 }[algorithm] ?? 'blue')
 
 const downloadUrl = (path) => api.defaults.baseURL + path

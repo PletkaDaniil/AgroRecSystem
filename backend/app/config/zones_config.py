@@ -62,9 +62,9 @@ ZONE_REGISTRY: dict[tuple[str, str, int], list[Zone]] = {
         Zone( 0.51, +np.inf, "#27AE60", 2),
     ],
 
-    # ── RPImod | кущение ─────────────────────────────────────────────────────
+    # ── PRImod | кущение ─────────────────────────────────────────────────────
 
-    ("RPImod", "tillering", 5): [
+    ("PRImod", "tillering", 5): [
         Zone(-np.inf, 0.46925, "#C0392B", 0),
         Zone( 0.46925,   0.4745, "#E67E22", 1),
         Zone( 0.4745,   0.47975, "#F1C40F", 2),
@@ -72,22 +72,22 @@ ZONE_REGISTRY: dict[tuple[str, str, int], list[Zone]] = {
         Zone( 0.485, +np.inf, "#27AE60", 4),
     ],
 
-    ("RPImod", "tillering", 4): [
+    ("PRImod", "tillering", 4): [
         Zone(-np.inf, 0.46925, "#C0392B", 0),
         Zone( 0.46925,   0.477125, "#E67E22", 1),
         Zone( 0.477125,   0.485, "#F1C40F", 2),
         Zone( 0.485, +np.inf, "#27AE60", 3),
     ],
 
-    ("RPImod", "tillering", 3): [
+    ("PRImod", "tillering", 3): [
         Zone(-np.inf, 0.46925, "#C0392B", 0),
         Zone( 0.46925,   0.485, "#F1C40F", 1),
         Zone( 0.485, +np.inf, "#27AE60", 2),
     ],
 
-    # ── RPImod | выход в трубку ──────────────────────────────────────────────
+    # ── PRImod | выход в трубку ──────────────────────────────────────────────
 
-    ("RPImod", "booting", 5): [
+    ("PRImod", "booting", 5): [
         Zone(-np.inf, 0.47925, "#C0392B", 0),
         Zone( 0.47925,   0.4845, "#E67E22", 1),
         Zone( 0.4845,   0.48975, "#F1C40F", 2),
@@ -95,14 +95,14 @@ ZONE_REGISTRY: dict[tuple[str, str, int], list[Zone]] = {
         Zone( 0.495, +np.inf, "#27AE60", 4),
     ],
 
-    ("RPImod", "booting", 4): [
+    ("PRImod", "booting", 4): [
         Zone(-np.inf, 0.47925, "#C0392B", 0),
         Zone( 0.47925,   0.487125, "#E67E22", 1),
         Zone( 0.487125,   0.495, "#F1C40F", 2),
         Zone( 0.495, +np.inf, "#27AE60", 3),
     ],
 
-    ("RPImod", "booting", 3): [
+    ("PRImod", "booting", 3): [
         Zone(-np.inf, 0.47925, "#C0392B", 0),
         Zone( 0.47925,   0.495, "#F1C40F", 1),
         Zone( 0.495, +np.inf, "#27AE60", 2),

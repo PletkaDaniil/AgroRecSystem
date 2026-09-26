@@ -723,8 +723,8 @@ const formulas = [
     icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8 Q6 4 10 8 Q14 12 18 8 Q20 6 22 8"/><path d="M2 16 Q6 12 10 16 Q14 20 18 16 Q20 14 22 16"/></svg>`,
   },
   {
-    id: 'RPImod',
-    name: 'RPImod',
+    id: 'PRImod',
+    name: 'PRImod',
     description: 'Modified Red-edge Position Index: c1 − (B1 − B2) / (B1 + B2). Каналы: B1, B2, c1 = 0.5.',
     icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
   },
@@ -732,7 +732,7 @@ const formulas = [
 
 const availableFormulas = computed(() =>
   inputMode.value === 'coords'
-    ? formulas.filter(f => f.id !== 'RPImod')
+    ? formulas.filter(f => f.id !== 'PRImod')
     : formulas
 )
 

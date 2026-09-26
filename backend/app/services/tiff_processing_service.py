@@ -1,5 +1,5 @@
 from pathlib import Path
-from app.core.geo_index import IndexProcessor, NDVI, ChlRI, RPImod
+from app.core.geo_index import IndexProcessor, NDVI, ChlRI, PRImod
 from app.core.spatial_resampler import resample_to_resolution
 from app.core.segmentation import segment_tiff
 from app.utils.schemas.processRequest import Bands
@@ -17,7 +17,7 @@ class ProcessingService:
         self.algorithms = {
             "ChlRI": ChlRI,
             "NDVI": NDVI,
-            "RPImod": RPImod,
+            "PRImod": PRImod,
         }
 
     def process_tiff(
@@ -39,10 +39,10 @@ class ProcessingService:
         band_map: dict[str, int] = bands.model_dump()
         index_class = self.algorithms[algorithm]
 
-        # задаем для RPImod параметр c1 (нам нужен именно 0.5)
+        # задаем для PRImod параметр c1 (нам нужен именно 0.5)
         index = (
             index_class(band_map=band_map, c1=0.5)
-            if algorithm == "RPImod"
+            if algorithm == "PRImod"
             else index_class(band_map=band_map)
         )
 

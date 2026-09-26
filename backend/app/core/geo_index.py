@@ -213,7 +213,7 @@ class ChlRI(SpectralIndex):
         return (nir - red_edge) / (nir + red_edge - 2 * blue + 1e-6)
 
 
-class RPImod(SpectralIndex):
+class PRImod(SpectralIndex):
     # Modified Redness Pigment Index
     # c1 - ((B1 - B2) / (B1 + B2))
 

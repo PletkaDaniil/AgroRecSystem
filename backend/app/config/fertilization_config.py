@@ -46,9 +46,9 @@ FERTILIZATION_REGISTRY: dict[tuple[str, str, int], dict[int, dict]] = {
         2: {"color": "#27AE60", "value": 0},
     },
 
-    # ── RPImod | кущение ───────────────────────────────────────────────
+    # ── PRImod | кущение ───────────────────────────────────────────────
 
-    ("RPImod", "tillering", 5): {
+    ("PRImod", "tillering", 5): {
         0: {"color": "#C0392B", "value": 120},
         1: {"color": "#E67E22", "value": 90},
         2: {"color": "#F1C40F", "value": 60},
@@ -56,22 +56,22 @@ FERTILIZATION_REGISTRY: dict[tuple[str, str, int], dict[int, dict]] = {
         4: {"color": "#27AE60", "value": 0},
     },
 
-    ("RPImod", "tillering", 4): {
+    ("PRImod", "tillering", 4): {
         0: {"color": "#C0392B", "value": 120},
         1: {"color": "#E67E22", "value": 80},
         2: {"color": "#F1C40F", "value": 40},
         3: {"color": "#27AE60", "value": 0},
     },
 
-    ("RPImod", "tillering", 3): {
+    ("PRImod", "tillering", 3): {
         0: {"color": "#C0392B", "value": 120},
         1: {"color": "#F1C40F", "value": 60},
         2: {"color": "#27AE60", "value": 0},
     },
 
-    # ── RPImod | выход в трубку ────────────────────────────────────────
+    # ── PRImod | выход в трубку ────────────────────────────────────────
 
-    ("RPImod", "booting", 5): {
+    ("PRImod", "booting", 5): {
         0: {"color": "#C0392B", "value": 120},
         1: {"color": "#E67E22", "value": 90},
         2: {"color": "#F1C40F", "value": 60},
@@ -79,14 +79,14 @@ FERTILIZATION_REGISTRY: dict[tuple[str, str, int], dict[int, dict]] = {
         4: {"color": "#27AE60", "value": 0},
     },
 
-    ("RPImod", "booting", 4): {
+    ("PRImod", "booting", 4): {
         0: {"color": "#C0392B", "value": 120},
         1: {"color": "#E67E22", "value": 80},
         2: {"color": "#F1C40F", "value": 40},
         3: {"color": "#27AE60", "value": 0},
     },
 
-    ("RPImod", "booting", 3): {
+    ("PRImod", "booting", 3): {
         0: {"color": "#C0392B", "value": 120},
         1: {"color": "#F1C40F", "value": 60},
         2: {"color": "#27AE60", "value": 0},
