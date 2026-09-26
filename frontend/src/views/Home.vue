@@ -689,7 +689,7 @@ const bandFields = [
   },
 ]
 
-const algorithmBands = { ChlRI: ['nir', 'red_edge', 'blue'], NDVI: ['nir', 'red'], RPImod: ['b1', 'b2'] }
+const algorithmBands = { ChlRI: ['nir', 'red_edge', 'blue'], NDVI: ['nir', 'red'], PRImod: ['b1', 'b2'] }
 const bandErrors = reactive({ nir: '', red: '', red_edge: '', blue: '', b1: '', b2: '' })
 
 const clearBandErrors = () => { Object.keys(bandErrors).forEach(k => { bandErrors[k] = '' }) }
