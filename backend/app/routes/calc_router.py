@@ -13,6 +13,7 @@ from app.utils.archive import build_result_archive
 from app.utils.auth import get_current_user
 from app.utils.verify import verify_ownership
 from app.utils.exceptions import NotFoundError, BadRequestError, ExternalServiceError
+from tomlkit import date, datetime
 
 
 calculator_router = APIRouter(
@@ -33,9 +34,8 @@ def process_coords(
     """
         Обработка поля по координатам через Sentinel-2
     """
-    coord_string = f"{body.lat1}{body.lon1}{body.lat2}{body.lon2}"
-
-    # генерируем hash координат
+    # дата входит в хэш, поэтому разные даты дают разные upload_id
+    coord_string = f"{body.lat1}|{body.lon1}|{body.lat2}|{body.lon2}|{body.snap_date}"
     coord_hash = hashlib.md5(coord_string.encode()).hexdigest()
     upload_id = f"{current_user.id}_{coord_hash}"
 
@@ -75,8 +75,8 @@ def process_coords(
 
     return {
         "image_url": f"/calculator/image/{upload_id}/{body.algorithm}",
-        "archive_url": f"/file/archive/{upload_id}/{body.algorithm}",
-        "fert_url": f"/file/fertilization/{upload_id}/{body.algorithm}",
+        "archive_url": f"/calculator/archive/{upload_id}/{body.algorithm}",
+        "fert_url": f"/calculator/fertilization/{upload_id}/{body.algorithm}",
     }
 
 
